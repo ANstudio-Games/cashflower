@@ -19,8 +19,9 @@ interface ChartBarData {
 export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('monthly');
 
-  // Aggregate transaction data based on selected filter
+  // Aggregate transaction data based on selected filter with full defensive checks
   const chartData = useMemo<ChartBarData[]>(() => {
+    const safeTxs = Array.isArray(transactions) ? transactions : [];
     const now = new Date();
 
     if (filter === 'daily') {
@@ -33,9 +34,9 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
         const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
         const label = i === 0 ? 'Hari ini' : dayNames[d.getDay()];
 
-        const dayTxs = transactions.filter((t) => t.date === iso);
-        const income = dayTxs.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-        const expense = dayTxs.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+        const dayTxs = safeTxs.filter((t) => (t?.date || '') === iso);
+        const income = dayTxs.filter((t) => t?.type === 'income').reduce((acc, t) => acc + (t?.amount || 0), 0);
+        const expense = dayTxs.filter((t) => t?.type === 'expense').reduce((acc, t) => acc + (t?.amount || 0), 0);
         days.push({ label, income, expense });
       }
       return days;
@@ -53,9 +54,9 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
         const prefix = `${y}-${m}`;
         const label = `${monthNames[d.getMonth()]}`;
 
-        const monthTxs = transactions.filter((t) => t.date.startsWith(prefix));
-        const income = monthTxs.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-        const expense = monthTxs.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+        const monthTxs = safeTxs.filter((t) => typeof t?.date === 'string' && t.date.startsWith(prefix));
+        const income = monthTxs.filter((t) => t?.type === 'income').reduce((acc, t) => acc + (t?.amount || 0), 0);
+        const expense = monthTxs.filter((t) => t?.type === 'expense').reduce((acc, t) => acc + (t?.amount || 0), 0);
         months.push({ label, income, expense });
       }
       return months;
@@ -66,15 +67,15 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
     const currentYear = now.getFullYear();
     for (let y = currentYear - 3; y <= currentYear; y++) {
       const prefix = `${y}-`;
-      const yearTxs = transactions.filter((t) => t.date.startsWith(prefix));
-      const income = yearTxs.filter((t) => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-      const expense = yearTxs.filter((t) => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+      const yearTxs = safeTxs.filter((t) => typeof t?.date === 'string' && t.date.startsWith(prefix));
+      const income = yearTxs.filter((t) => t?.type === 'income').reduce((acc, t) => acc + (t?.amount || 0), 0);
+      const expense = yearTxs.filter((t) => t?.type === 'expense').reduce((acc, t) => acc + (t?.amount || 0), 0);
       years.push({ label: `${y}`, income, expense });
     }
     return years;
   }, [transactions, filter]);
 
-  // Find maximum value to scale the bars
+  // Find maximum value to scale the bars safely
   const maxVal = useMemo(() => {
     let max = 0;
     for (const d of chartData) {
@@ -84,7 +85,7 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
     return max > 0 ? max : 100000;
   }, [chartData]);
 
-  const chartHeight = 150;
+  const chartHeight = 140;
 
   return (
     <View style={styles.container}>
@@ -123,13 +124,15 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
       <View style={[styles.chartArea, { height: chartHeight + 35 }]}>
         {/* Horizontal grid guide lines */}
         <View style={styles.gridLine} />
-        <View style={[styles.gridLine, { bottom: chartHeight * 0.5 + 25 }]} />
-        <View style={[styles.gridLine, { bottom: chartHeight + 25 }]} />
+        <View style={[styles.gridLine, { bottom: Math.round(chartHeight * 0.5 + 25) }]} />
+        <View style={[styles.gridLine, { bottom: Math.round(chartHeight + 25) }]} />
 
         <View style={styles.barsRow}>
           {chartData.map((item, index) => {
-            const incomeHeight = Math.max(4, (item.income / maxVal) * chartHeight);
-            const expenseHeight = Math.max(4, (item.expense / maxVal) * chartHeight);
+            const rawInc = maxVal > 0 ? (item.income / maxVal) * chartHeight : 0;
+            const rawExp = maxVal > 0 ? (item.expense / maxVal) * chartHeight : 0;
+            const incomeHeight = Math.min(chartHeight, Math.max(4, Math.round(rawInc)));
+            const expenseHeight = Math.min(chartHeight, Math.max(4, Math.round(rawExp)));
 
             return (
               <View key={index} style={styles.barGroup}>
@@ -139,7 +142,7 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
                     {item.income > 0 ? (
                       <View style={[styles.bar, { height: incomeHeight, backgroundColor: colors.income }]} />
                     ) : (
-                      <View style={[styles.emptyBar]} />
+                      <View style={styles.emptyBar} />
                     )}
                   </View>
 
@@ -148,7 +151,7 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
                     {item.expense > 0 ? (
                       <View style={[styles.bar, { height: expenseHeight, backgroundColor: colors.expense }]} />
                     ) : (
-                      <View style={[styles.emptyBar]} />
+                      <View style={styles.emptyBar} />
                     )}
                   </View>
                 </View>
@@ -165,7 +168,7 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
 
       {/* Max range indicator */}
       <View style={styles.rangeInfo}>
-        <Text style={styles.rangeText}>Puncak: {formatCurrencyShort(maxVal)}</Text>
+        <Text style={styles.rangeText}>Puncak Skala: {formatCurrencyShort(maxVal)}</Text>
       </View>
     </View>
   );

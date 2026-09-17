@@ -24,6 +24,10 @@ export const colors = {
   expenseSoft: '#FEF2F2',
   expenseDark: '#B91C1C',
 
+  // Warning
+  warning: '#F59E0B',
+  warningSoft: '#FFFBEB',
+
   // Hutang (Payable - You owe)
   debt: '#F59E0B',       // Amber 500
   debtSoft: '#FFFBEB',

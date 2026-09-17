@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
     marginTop: 6,
   },
 });

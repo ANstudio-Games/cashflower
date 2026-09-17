@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
     backgroundColor: colors.surface,
     marginHorizontal: 16,
     marginTop: 10,

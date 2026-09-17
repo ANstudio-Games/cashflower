@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   widgetsRow: {
     flexDirection: 'row',

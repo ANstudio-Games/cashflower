@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,29 +8,61 @@ import { CategoryDonutChart } from '@/components/category-donut-chart';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
 
+// Error boundary to prevent any chart error from crashing the entire app
+class ChartErrorBoundary extends Component<{ children: ReactNode; title: string }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; title: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.warn('Chart render error caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorCard}>
+          <Ionicons name="alert-circle-outline" size={24} color={colors.warning} />
+          <Text style={styles.errorText}>Grafik sementara tidak dapat ditampilkan.</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function AnalyticsScreen() {
   const { transactions, categories, cashflowSummary } = useFinance();
 
-  // Category breakdown calculation
+  // Safe category breakdown calculation
   const categoryBreakdown = useMemo(() => {
-    const expenseTxs = transactions.filter((t) => t.type === 'expense');
-    const totalExpense = expenseTxs.reduce((sum, t) => sum + t.amount, 0);
-    if (totalExpense === 0) return [];
+    const safeTxs = Array.isArray(transactions) ? transactions : [];
+    const safeCats = Array.isArray(categories) ? categories : [];
+    const expenseTxs = safeTxs.filter((t) => t?.type === 'expense');
+    const totalExpense = expenseTxs.reduce((sum, t) => sum + (t?.amount || 0), 0);
+    if (totalExpense <= 0) return [];
 
     const map = new Map<string, number>();
     for (const t of expenseTxs) {
-      map.set(t.category_id, (map.get(t.category_id) || 0) + t.amount);
+      if (t?.category_id) {
+        map.set(t.category_id, (map.get(t.category_id) || 0) + (t.amount || 0));
+      }
     }
 
     const items = Array.from(map.entries()).map(([catId, amount]) => {
-      const cat = categories.find((c) => c.id === catId);
+      const cat = safeCats.find((c) => c.id === catId);
       return {
         categoryId: catId,
         name: cat?.name || 'Lainnya',
         color: cat?.color || colors.expense,
         icon: cat?.icon || 'grid-outline',
         total: amount,
-        percentage: (amount / totalExpense) * 100,
+        percentage: totalExpense > 0 ? (amount / totalExpense) * 100 : 0,
       };
     });
 
@@ -38,11 +70,14 @@ export default function AnalyticsScreen() {
     return items;
   }, [transactions, categories]);
 
-  // Savings rate calculation
+  // Safe savings rate calculation
   const savingsRate = useMemo(() => {
-    if (cashflowSummary.totalIncome === 0) return 0;
-    const saved = cashflowSummary.totalIncome - cashflowSummary.totalExpense;
-    return Math.max(0, (saved / cashflowSummary.totalIncome) * 100);
+    const income = cashflowSummary?.totalIncome || 0;
+    const expense = cashflowSummary?.totalExpense || 0;
+    if (income <= 0) return 0;
+    const saved = income - expense;
+    const rate = (saved / income) * 100;
+    return isNaN(rate) ? 0 : Math.max(0, Math.min(100, rate));
   }, [cashflowSummary]);
 
   return (
@@ -61,7 +96,7 @@ export default function AnalyticsScreen() {
           <View style={[styles.kpiCard, shadowStyles.sm]}>
             <Text style={styles.kpiLabel}>Total Masuk</Text>
             <Text style={[styles.kpiValue, { color: colors.incomeDark }]}>
-              {formatCurrency(cashflowSummary.totalIncome)}
+              {formatCurrency(cashflowSummary?.totalIncome || 0)}
             </Text>
             <View style={[styles.kpiPill, { backgroundColor: colors.incomeSoft }]}>
               <Ionicons name="arrow-down" size={12} color={colors.incomeDark} />
@@ -72,7 +107,7 @@ export default function AnalyticsScreen() {
           <View style={[styles.kpiCard, shadowStyles.sm]}>
             <Text style={styles.kpiLabel}>Total Belanja</Text>
             <Text style={[styles.kpiValue, { color: colors.expenseDark }]}>
-              {formatCurrency(cashflowSummary.totalExpense)}
+              {formatCurrency(cashflowSummary?.totalExpense || 0)}
             </Text>
             <View style={[styles.kpiPill, { backgroundColor: colors.expenseSoft }]}>
               <Ionicons name="arrow-up" size={12} color={colors.expenseDark} />
@@ -91,7 +126,7 @@ export default function AnalyticsScreen() {
             <Text style={styles.savingsPercent}>{savingsRate.toFixed(1)}%</Text>
           </View>
           <View style={styles.savingsTrack}>
-            <View style={[styles.savingsFill, { width: `${Math.min(100, savingsRate)}%` }]} />
+            <View style={[styles.savingsFill, { width: `${savingsRate}%` }]} />
           </View>
         </View>
 
@@ -100,17 +135,21 @@ export default function AnalyticsScreen() {
           <Ionicons name="stats-chart" size={18} color={colors.primary} />
           <Text style={styles.sectionTitle}>Tren Arus Kas (Waktu)</Text>
         </View>
-        <CashflowBarChart transactions={transactions} />
+        <ChartErrorBoundary title="Tren Arus Kas">
+          <CashflowBarChart transactions={transactions} />
+        </ChartErrorBoundary>
 
         {/* Section: Donut Chart Kategori */}
         <View style={styles.sectionTitleRow}>
           <Ionicons name="pie-chart" size={18} color={colors.primary} />
           <Text style={styles.sectionTitle}>Proporsi Kategori Belanja</Text>
         </View>
-        <CategoryDonutChart
-          data={categoryBreakdown}
-          totalExpense={cashflowSummary.totalExpense}
-        />
+        <ChartErrorBoundary title="Kategori Pengeluaran">
+          <CategoryDonutChart
+            data={categoryBreakdown}
+            totalExpense={cashflowSummary?.totalExpense || 0}
+          />
+        </ChartErrorBoundary>
       </ScrollView>
     </SafeAreaView>
   );
@@ -137,7 +176,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 110, // Ruang lega di bawah agar tidak terhalang tab bar yang lebih tinggi
   },
   kpiRow: {
     flexDirection: 'row',
@@ -230,5 +269,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.text,
+  },
+  errorCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  errorText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    flex: 1,
   },
 });

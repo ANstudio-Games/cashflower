@@ -2,9 +2,16 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
+  // Pastikan ada ruang yang cukup di bawah agar tidak terhalang tombol navigasi Android (Back, Home, Recents)
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 20 : 16);
+  const barHeight = 58 + bottomPadding;
+
   return (
     <Tabs
       screenOptions={{
@@ -15,18 +22,24 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingTop: 6,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-          elevation: 8,
+          height: barHeight,
+          paddingTop: 8,
+          paddingBottom: bottomPadding,
+          elevation: 12,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.04,
-          shadowRadius: 6,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+        },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 2,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          marginTop: 2,
         },
       }}>
       <Tabs.Screen
