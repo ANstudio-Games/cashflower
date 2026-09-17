@@ -1,5 +1,15 @@
 import * as SQLite from 'expo-sqlite';
-import { Category, Transaction, Debt, Investment, CashflowSummary, DebtSummary, InvestmentSummary } from '@/types';
+import {
+  Category,
+  Transaction,
+  Debt,
+  Investment,
+  Budget,
+  BackupData,
+  CashflowSummary,
+  DebtSummary,
+  InvestmentSummary,
+} from '@/types';
 
 export const DB_NAME = 'cashflower.db';
 
@@ -72,6 +82,13 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       pnl_percentage REAL NOT NULL,
       trade_date TEXT NOT NULL,
       notes TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS budgets (
+      id TEXT PRIMARY KEY,
+      category_id TEXT,
+      monthly_limit REAL NOT NULL,
       created_at INTEGER NOT NULL
     );
   `);
@@ -159,6 +176,16 @@ export async function getTransactions(
   return await db.getAllAsync<Transaction>(query, params);
 }
 
+export async function getTransactionById(db: SQLite.SQLiteDatabase, id: string): Promise<Transaction | null> {
+  return await db.getFirstAsync<Transaction>(
+    `SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
+     FROM transactions t
+     LEFT JOIN categories c ON t.category_id = c.id
+     WHERE t.id = ?`,
+    [id]
+  );
+}
+
 export async function addTransaction(
   db: SQLite.SQLiteDatabase,
   item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>
@@ -167,6 +194,18 @@ export async function addTransaction(
     `INSERT INTO transactions (id, title, amount, type, category_id, date, notes, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [item.id, item.title, item.amount, item.type, item.category_id, item.date, item.notes ?? null, item.created_at]
+  );
+}
+
+export async function updateTransaction(
+  db: SQLite.SQLiteDatabase,
+  item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE transactions 
+     SET title = ?, amount = ?, type = ?, category_id = ?, date = ?, notes = ?
+     WHERE id = ?`,
+    [item.title, item.amount, item.type, item.category_id, item.date, item.notes ?? null, item.id]
   );
 }
 
@@ -370,4 +409,137 @@ export async function getInvestmentSummary(db: SQLite.SQLiteDatabase): Promise<I
     totalTrades: row?.totalTrades || 0,
     netReturnPercentage: netReturn,
   };
+}
+
+// ------------------- Target Budgeting Operations -------------------
+
+export async function getBudgets(db: SQLite.SQLiteDatabase): Promise<Budget[]> {
+  const now = new Date();
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const query = `
+    SELECT 
+      b.*,
+      c.name as category_name,
+      c.icon as category_icon,
+      c.color as category_color,
+      COALESCE(
+        (SELECT SUM(t.amount) 
+         FROM transactions t 
+         WHERE t.type = 'expense' 
+           AND t.date LIKE '${yearMonth}%'
+           AND (
+             (b.category_id IS NULL) 
+             OR (t.category_id = b.category_id)
+           )
+        ), 0
+      ) as current_spent
+    FROM budgets b
+    LEFT JOIN categories c ON b.category_id = c.id
+    ORDER BY b.category_id IS NULL DESC, current_spent DESC
+  `;
+
+  return await db.getAllAsync<Budget>(query);
+}
+
+export async function saveBudget(
+  db: SQLite.SQLiteDatabase,
+  budget: { id: string; category_id: string | null; monthly_limit: number }
+): Promise<void> {
+  await db.runAsync(
+    `INSERT OR REPLACE INTO budgets (id, category_id, monthly_limit, created_at)
+     VALUES (?, ?, ?, ?)`,
+    [budget.id, budget.category_id ?? null, budget.monthly_limit, Date.now()]
+  );
+}
+
+export async function deleteBudget(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM budgets WHERE id = ?', [id]);
+}
+
+// ------------------- Backup & Restore Operations -------------------
+
+export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupData> {
+  const [categories, transactions, debts, investments, budgets] = await Promise.all([
+    db.getAllAsync<Category>('SELECT * FROM categories'),
+    db.getAllAsync<Transaction>('SELECT * FROM transactions'),
+    db.getAllAsync<Debt>('SELECT * FROM debts'),
+    db.getAllAsync<Investment>('SELECT * FROM investments'),
+    db.getAllAsync<Budget>('SELECT * FROM budgets'),
+  ]);
+
+  return {
+    version: '1.1.0',
+    exported_at: new Date().toISOString(),
+    categories,
+    transactions,
+    debts,
+    investments,
+    budgets,
+  };
+}
+
+export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupData): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    // Clear current tables
+    await db.execAsync(`
+      DELETE FROM transactions;
+      DELETE FROM debts;
+      DELETE FROM investments;
+      DELETE FROM budgets;
+    `);
+
+    // Restore categories
+    if (Array.isArray(backup.categories)) {
+      for (const cat of backup.categories) {
+        await db.runAsync(
+          'INSERT OR REPLACE INTO categories (id, name, type, icon, color, is_default) VALUES (?, ?, ?, ?, ?, ?)',
+          [cat.id, cat.name, cat.type, cat.icon, cat.color, cat.is_default ?? 0]
+        );
+      }
+    }
+
+    // Restore transactions
+    if (Array.isArray(backup.transactions)) {
+      for (const t of backup.transactions) {
+        await db.runAsync(
+          `INSERT INTO transactions (id, title, amount, type, category_id, date, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, t.title, t.amount, t.type, t.category_id, t.date, t.notes ?? null, t.created_at || Date.now()]
+        );
+      }
+    }
+
+    // Restore debts
+    if (Array.isArray(backup.debts)) {
+      for (const d of backup.debts) {
+        await db.runAsync(
+          `INSERT INTO debts (id, person_name, type, amount, due_date, issue_date, is_paid, paid_date, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [d.id, d.person_name, d.type, d.amount, d.due_date ?? null, d.issue_date, d.is_paid, d.paid_date ?? null, d.notes ?? null, d.created_at || Date.now()]
+        );
+      }
+    }
+
+    // Restore investments
+    if (Array.isArray(backup.investments)) {
+      for (const inv of backup.investments) {
+        await db.runAsync(
+          `INSERT INTO investments (id, instrument_type, asset_name, buy_price, sell_price, pnl, pnl_percentage, trade_date, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [inv.id, inv.instrument_type, inv.asset_name, inv.buy_price, inv.sell_price, inv.pnl, inv.pnl_percentage, inv.trade_date, inv.notes ?? null, inv.created_at || Date.now()]
+        );
+      }
+    }
+
+    // Restore budgets
+    if (Array.isArray(backup.budgets)) {
+      for (const b of backup.budgets) {
+        await db.runAsync(
+          'INSERT OR REPLACE INTO budgets (id, category_id, monthly_limit, created_at) VALUES (?, ?, ?, ?)',
+          [b.id, b.category_id ?? null, b.monthly_limit, b.created_at || Date.now()]
+        );
+      }
+    }
+  });
 }

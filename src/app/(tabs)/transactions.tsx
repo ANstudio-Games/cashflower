@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { TransactionItem } from '@/components/transaction-item';
 import { EmptyState } from '@/components/empty-state';
-import { colors, shadowStyles } from '@/theme/colors';
+import { colors } from '@/theme/colors';
 
 export default function TransactionsScreen() {
   const router = useRouter();
@@ -29,21 +29,28 @@ export default function TransactionsScreen() {
       // Search title or notes
       if (search.trim()) {
         const q = search.toLowerCase().trim();
-        const matchTitle = tx.title.toLowerCase().includes(q);
-        const matchNotes = tx.notes ? tx.notes.toLowerCase().includes(q) : false;
+        const matchTitle = (tx?.title || '').toLowerCase().includes(q);
+        const matchNotes = tx?.notes ? tx.notes.toLowerCase().includes(q) : false;
         if (!matchTitle && !matchNotes) return false;
       }
       // Type filter
-      if (typeFilter !== 'all' && tx.type !== typeFilter) {
+      if (typeFilter !== 'all' && tx?.type !== typeFilter) {
         return false;
       }
       // Category filter
-      if (categoryFilter !== 'all' && tx.category_id !== categoryFilter) {
+      if (categoryFilter !== 'all' && tx?.category_id !== categoryFilter) {
         return false;
       }
       return true;
     });
   }, [transactions, search, typeFilter, categoryFilter]);
+
+  const handleEdit = (id: string) => {
+    router.push({
+      pathname: '/modal/add-transaction',
+      params: { id },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -67,7 +74,7 @@ export default function TransactionsScreen() {
         <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Cari nama barang atau catatan..."
+          placeholder="Cari belanjaan, nama barang..."
           placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
@@ -79,69 +86,88 @@ export default function TransactionsScreen() {
         )}
       </View>
 
-      {/* Filter Tabs */}
+      {/* Type Filter Buttons */}
       <View style={styles.filterRow}>
         <Pressable
           style={[styles.typeTab, typeFilter === 'all' && styles.typeTabActive]}
           onPress={() => setTypeFilter('all')}>
-          <Text style={[styles.typeTabText, typeFilter === 'all' && styles.typeTabTextActive]}>
+          <Text
+            style={[styles.typeTabText, typeFilter === 'all' && styles.typeTabTextActive]}
+            numberOfLines={1}>
             Semua
           </Text>
         </Pressable>
         <Pressable
-          style={[styles.typeTab, typeFilter === 'expense' && styles.typeTabActive]}
+          style={[styles.typeTab, typeFilter === 'expense' && styles.typeTabActiveExpense]}
           onPress={() => setTypeFilter('expense')}>
-          <Text style={[styles.typeTabText, typeFilter === 'expense' && styles.typeTabTextActive]}>
+          <Ionicons
+            name="arrow-up"
+            size={13}
+            color={typeFilter === 'expense' ? colors.expenseDark : colors.textSecondary}
+          />
+          <Text
+            style={[styles.typeTabText, typeFilter === 'expense' && styles.typeTabTextActiveExpense]}
+            numberOfLines={1}>
             Pengeluaran
           </Text>
         </Pressable>
         <Pressable
-          style={[styles.typeTab, typeFilter === 'income' && styles.typeTabActive]}
+          style={[styles.typeTab, typeFilter === 'income' && styles.typeTabActiveIncome]}
           onPress={() => setTypeFilter('income')}>
-          <Text style={[styles.typeTabText, typeFilter === 'income' && styles.typeTabTextActive]}>
+          <Ionicons
+            name="arrow-down"
+            size={13}
+            color={typeFilter === 'income' ? colors.incomeDark : colors.textSecondary}
+          />
+          <Text
+            style={[styles.typeTabText, typeFilter === 'income' && styles.typeTabTextActiveIncome]}
+            numberOfLines={1}>
             Pemasukan
           </Text>
         </Pressable>
       </View>
 
-      {/* Horizontal Category Chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScroll}>
-        <Pressable
-          style={[styles.catChip, categoryFilter === 'all' && styles.catChipActive]}
-          onPress={() => setCategoryFilter('all')}>
-          <Text style={[styles.catChipText, categoryFilter === 'all' && styles.catChipTextActive]}>
-            Semua Kategori
-          </Text>
-        </Pressable>
-        {categories.map((cat) => {
-          const isSelected = categoryFilter === cat.id;
-          return (
-            <Pressable
-              key={cat.id}
-              style={[
-                styles.catChip,
-                isSelected && { backgroundColor: `${cat.color}20`, borderColor: cat.color },
-              ]}
-              onPress={() => setCategoryFilter(cat.id)}>
-              <Ionicons
-                name={(cat.icon || 'grid-outline') as any}
-                size={14}
-                color={isSelected ? cat.color : colors.textSecondary}
-              />
-              <Text
+      {/* Horizontal Category Chips Container with Guaranteed Visibility */}
+      <View style={styles.categoryScrollContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScroll}>
+          <Pressable
+            style={[styles.catChip, categoryFilter === 'all' && styles.catChipActive]}
+            onPress={() => setCategoryFilter('all')}>
+            <Text style={[styles.catChipText, categoryFilter === 'all' && styles.catChipTextActive]}>
+              Semua Kategori
+            </Text>
+          </Pressable>
+
+          {categories.map((cat) => {
+            const isSelected = categoryFilter === cat.id;
+            return (
+              <Pressable
+                key={cat.id}
                 style={[
-                  styles.catChipText,
-                  isSelected && { color: cat.color, fontWeight: '700' },
-                ]}>
-                {cat.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                  styles.catChip,
+                  isSelected && { backgroundColor: `${cat.color}20`, borderColor: cat.color },
+                ]}
+                onPress={() => setCategoryFilter(cat.id)}>
+                <Ionicons
+                  name={(cat.icon || 'grid-outline') as any}
+                  size={14}
+                  color={isSelected ? cat.color : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.catChipText,
+                    isSelected && { color: cat.color, fontWeight: '700' },
+                  ]}>
+                  {cat.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Transaction List */}
       <FlatList
@@ -150,6 +176,7 @@ export default function TransactionsScreen() {
         renderItem={({ item }) => (
           <TransactionItem
             item={item}
+            onEdit={() => handleEdit(item.id)}
             onDelete={(id) => deleteTransactionById(id)}
           />
         )}
@@ -211,9 +238,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 6,
     paddingHorizontal: 12,
-    height: 44,
+    height: 42,
   },
   searchIcon: {
     marginRight: 8,
@@ -228,45 +255,69 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: 12,
-    padding: 3,
+    padding: 4,
     marginHorizontal: 16,
     marginVertical: 6,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: 4,
   },
   typeTab: {
     flex: 1,
-    paddingVertical: 7,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
     borderRadius: 9,
+    gap: 4,
   },
   typeTabActive: {
     backgroundColor: colors.surfaceHover,
   },
+  typeTabActiveExpense: {
+    backgroundColor: colors.expenseSoft,
+  },
+  typeTabActiveIncome: {
+    backgroundColor: colors.incomeSoft,
+  },
   typeTabText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   typeTabTextActive: {
     color: colors.text,
     fontWeight: '700',
   },
+  typeTabTextActiveExpense: {
+    color: colors.expenseDark,
+    fontWeight: '700',
+  },
+  typeTabTextActiveIncome: {
+    color: colors.incomeDark,
+    fontWeight: '700',
+  },
+  categoryScrollContainer: {
+    height: 46,
+    marginTop: 4,
+    marginBottom: 6,
+  },
   categoryScroll: {
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    alignItems: 'center',
     gap: 8,
   },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
+    height: 36,
   },
   catChipActive: {
     backgroundColor: colors.primarySoft,
@@ -285,7 +336,7 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
     backgroundColor: colors.surface,
     marginHorizontal: 16,
-    marginTop: 10,
+    marginTop: 6,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,

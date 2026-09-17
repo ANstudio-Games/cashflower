@@ -35,6 +35,14 @@ export default function RootLayout() {
               name="modal/add-category"
               options={{ presentation: 'modal', headerShown: false }}
             />
+            <Stack.Screen
+              name="modal/settings"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
+            <Stack.Screen
+              name="modal/budget"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
           </Stack>
         </FinanceProvider>
       </SQLiteProvider>

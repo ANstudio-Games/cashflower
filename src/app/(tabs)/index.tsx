@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,9 +24,9 @@ export default function HomeScreen() {
     cashflowSummary,
     debtSummary,
     investmentSummary,
+    budgets,
     deleteTransactionById,
     refreshAll,
-    isLoading,
   } = useFinance();
 
   const [refreshing, setRefreshing] = React.useState(false);
@@ -39,6 +38,16 @@ export default function HomeScreen() {
   };
 
   const recentTransactions = transactions.slice(0, 5);
+
+  const globalBudget = budgets.find((b) => b.category_id === null);
+  const spent = globalBudget?.current_spent || 0;
+  const limit = globalBudget?.monthly_limit || 0;
+  const budgetPct = limit > 0 ? (spent / limit) * 100 : 0;
+  const isOver = spent > limit && limit > 0;
+
+  let budgetColor = colors.income;
+  if (budgetPct >= 70 && !isOver) budgetColor = colors.warning;
+  if (isOver) budgetColor = colors.expense;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -52,11 +61,19 @@ export default function HomeScreen() {
           <Text style={styles.headerSubtitle}>Pencatatan Keuangan & Arus Kas</Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [styles.addHeaderBtn, pressed && { opacity: 0.8 }]}
-          onPress={() => router.push('/modal/add-transaction')}>
-          <Ionicons name="add" size={22} color="#FFFFFF" />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/modal/settings')}>
+            <Ionicons name="settings-outline" size={20} color={colors.text} />
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.addHeaderBtn, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/modal/add-transaction')}>
+            <Ionicons name="add" size={22} color="#FFFFFF" />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -70,6 +87,48 @@ export default function HomeScreen() {
           totalExpense={cashflowSummary.totalExpense}
           onAddPress={() => router.push('/modal/add-transaction')}
         />
+
+        {/* Budgeting Widget Card */}
+        <Pressable
+          style={({ pressed }) => [styles.budgetWidget, shadowStyles.sm, pressed && { opacity: 0.9 }]}
+          onPress={() => router.push('/modal/budget')}>
+          <View style={styles.budgetWidgetHeader}>
+            <View style={styles.budgetWidgetLeft}>
+              <View style={[styles.budgetIconWrap, { backgroundColor: colors.warningSoft }]}>
+                <Ionicons name="pie-chart" size={16} color={colors.warning} />
+              </View>
+              <View>
+                <Text style={styles.budgetWidgetTitle}>
+                  {globalBudget ? 'Target Anggaran Bulan Ini' : 'Atur Batas Belanja Bulanan'}
+                </Text>
+                <Text style={styles.budgetWidgetSub}>
+                  {globalBudget
+                    ? `${formatCurrency(spent)} dari ${formatCurrency(limit)}`
+                    : 'Pasang limit agar tidak boros'}
+                </Text>
+              </View>
+            </View>
+
+            {globalBudget ? (
+              <Text style={[styles.budgetWidgetPercent, { color: budgetColor }]}>
+                {budgetPct.toFixed(0)}%
+              </Text>
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            )}
+          </View>
+
+          {globalBudget ? (
+            <View style={styles.budgetTrack}>
+              <View
+                style={[
+                  styles.budgetFill,
+                  { width: `${Math.min(100, Math.max(3, budgetPct))}%`, backgroundColor: budgetColor },
+                ]}
+              />
+            </View>
+          ) : null}
+        </Pressable>
 
         {/* Quick Snapshot Widgets */}
         <View style={styles.widgetsRow}>
@@ -137,6 +196,7 @@ export default function HomeScreen() {
               <TransactionItem
                 key={tx.id}
                 item={tx}
+                onEdit={() => router.push({ pathname: '/modal/add-transaction', params: { id: tx.id } })}
                 onDelete={(id) => deleteTransactionById(id)}
               />
             ))}
@@ -190,9 +250,24 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  settingsBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   addHeaderBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: colors.primary,
     justifyContent: 'center',
@@ -200,6 +275,59 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 110,
+  },
+  budgetWidget: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 14,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  budgetWidgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  budgetWidgetLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  budgetIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetWidgetTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  budgetWidgetSub: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  budgetWidgetPercent: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginLeft: 8,
+  },
+  budgetTrack: {
+    height: 6,
+    backgroundColor: colors.background,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+  budgetFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   widgetsRow: {
     flexDirection: 'row',

@@ -43,6 +43,10 @@ export const colors = {
   investmentSoft: '#EFF6FF',
   investmentDark: '#1D4ED8',
 
+  // Info
+  info: '#3B82F6',
+  infoSoft: '#EFF6FF',
+
   shadow: 'rgba(15, 23, 42, 0.06)',
 };
 

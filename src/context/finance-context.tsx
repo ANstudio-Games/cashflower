@@ -6,6 +6,7 @@ import {
   Transaction,
   Debt,
   Investment,
+  Budget,
   CashflowSummary,
   DebtSummary,
   InvestmentSummary,
@@ -15,6 +16,7 @@ import {
   addCategory,
   getTransactions,
   addTransaction,
+  updateTransaction,
   deleteTransaction,
   getCashflowSummary,
   getDebts,
@@ -26,7 +28,12 @@ import {
   addInvestment,
   deleteInvestment,
   getInvestmentSummary,
+  getBudgets,
+  saveBudget,
+  deleteBudget,
 } from '@/db';
+import { backupToGoogleDriveOrShare, restoreFromBackupFile } from '@/utils/backup';
+import { scheduleDailyReminder, scheduleDebtReminder } from '@/utils/notifications';
 
 interface FinanceContextType {
   isLoading: boolean;
@@ -34,11 +41,13 @@ interface FinanceContextType {
   categories: Category[];
   debts: Debt[];
   investments: Investment[];
+  budgets: Budget[];
   cashflowSummary: CashflowSummary;
   debtSummary: DebtSummary;
   investmentSummary: InvestmentSummary;
   refreshAll: () => Promise<void>;
   createTransaction: (item: Omit<Transaction, 'id' | 'created_at' | 'category_name' | 'category_icon' | 'category_color'>) => Promise<void>;
+  editTransaction: (item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>) => Promise<void>;
   deleteTransactionById: (id: string) => Promise<void>;
   createCategory: (cat: { name: string; type: 'income' | 'expense'; icon: string; color: string }) => Promise<void>;
   createDebt: (debt: Omit<Debt, 'id' | 'created_at'>) => Promise<void>;
@@ -46,6 +55,10 @@ interface FinanceContextType {
   deleteDebtById: (id: string) => Promise<void>;
   createInvestment: (item: Omit<Investment, 'id' | 'created_at' | 'pnl' | 'pnl_percentage'>) => Promise<void>;
   deleteInvestmentById: (id: string) => Promise<void>;
+  saveNewBudget: (budget: { id: string; category_id: string | null; monthly_limit: number }) => Promise<void>;
+  removeBudget: (id: string) => Promise<void>;
+  backupData: () => Promise<boolean>;
+  restoreData: () => Promise<number>;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
@@ -57,6 +70,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
 
   const [cashflowSummary, setCashflowSummary] = useState<CashflowSummary>({
     totalIncome: 0,
@@ -90,6 +104,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         fetchedDebtSum,
         fetchedInvestments,
         fetchedInvSum,
+        fetchedBudgets,
       ] = await Promise.all([
         getCategories(db),
         getTransactions(db),
@@ -98,6 +113,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         getDebtSummary(db),
         getInvestments(db),
         getInvestmentSummary(db),
+        getBudgets(db),
       ]);
 
       setCategories(fetchedCategories);
@@ -107,6 +123,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setDebtSummary(fetchedDebtSum);
       setInvestments(fetchedInvestments);
       setInvestmentSummary(fetchedInvSum);
+      setBudgets(fetchedBudgets);
     } catch (err) {
       console.error('Error refreshing finance data:', err);
     } finally {
@@ -116,13 +133,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshAll();
+    // Schedule default daily reminder at 20:00
+    scheduleDailyReminder(20, 0);
   }, [refreshAll]);
 
   const triggerHaptic = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {
-      // Haptics might not be supported in some environments
+      // Haptics safe fallback
     }
   };
 
@@ -135,6 +154,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       created_at: Date.now(),
     };
     await addTransaction(db, newTx);
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const editTransaction = async (
+    item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>
+  ) => {
+    await updateTransaction(db, item);
     triggerHaptic();
     await refreshAll();
   };
@@ -166,6 +193,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       created_at: Date.now(),
     };
     await addDebt(db, newDebt);
+    scheduleDebtReminder(newDebt);
     triggerHaptic();
     await refreshAll();
   };
@@ -203,6 +231,30 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await refreshAll();
   };
 
+  const saveNewBudget = async (budget: { id: string; category_id: string | null; monthly_limit: number }) => {
+    await saveBudget(db, budget);
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const removeBudget = async (id: string) => {
+    await deleteBudget(db, id);
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const backupData = async () => {
+    return await backupToGoogleDriveOrShare(db);
+  };
+
+  const restoreData = async () => {
+    const count = await restoreFromBackupFile(db);
+    if (count > 0) {
+      await refreshAll();
+    }
+    return count;
+  };
+
   return (
     <FinanceContext.Provider
       value={{
@@ -211,11 +263,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         categories,
         debts,
         investments,
+        budgets,
         cashflowSummary,
         debtSummary,
         investmentSummary,
         refreshAll,
         createTransaction,
+        editTransaction,
         deleteTransactionById,
         createCategory,
         createDebt,
@@ -223,6 +277,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         deleteDebtById,
         createInvestment,
         deleteInvestmentById,
+        saveNewBudget,
+        removeBudget,
+        backupData,
+        restoreData,
       }}>
       {children}
     </FinanceContext.Provider>

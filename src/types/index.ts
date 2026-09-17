@@ -55,6 +55,17 @@ export interface Investment {
   created_at: number;
 }
 
+export interface Budget {
+  id: string;
+  category_id: string | null; // null = global monthly budget, string = category budget
+  monthly_limit: number;
+  created_at: number;
+  category_name?: string;
+  category_icon?: string;
+  category_color?: string;
+  current_spent?: number;
+}
+
 export interface CashflowSummary {
   totalIncome: number;
   totalExpense: number;
@@ -75,4 +86,14 @@ export interface InvestmentSummary {
   lossCount: number;
   totalTrades: number;
   netReturnPercentage: number;
+}
+
+export interface BackupData {
+  version: string;
+  exported_at: string;
+  transactions: Transaction[];
+  categories: Category[];
+  debts: Debt[];
+  investments: Investment[];
+  budgets: Budget[];
 }

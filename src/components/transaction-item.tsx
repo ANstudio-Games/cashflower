@@ -8,10 +8,11 @@ import { getRelativeDateLabel } from '@/utils/format-date';
 
 interface TransactionItemProps {
   item: Transaction;
+  onEdit?: (item: Transaction) => void;
   onDelete?: (id: string) => void;
 }
 
-export function TransactionItem({ item, onDelete }: TransactionItemProps) {
+export function TransactionItem({ item, onEdit, onDelete }: TransactionItemProps) {
   const isIncome = item.type === 'income';
 
   const handleDelete = () => {
@@ -30,7 +31,9 @@ export function TransactionItem({ item, onDelete }: TransactionItemProps) {
   const categoryColor = item.category_color || (isIncome ? colors.income : colors.expense);
 
   return (
-    <View style={styles.container}>
+    <Pressable
+      style={({ pressed }) => [styles.container, pressed && onEdit && styles.containerPressed]}
+      onPress={() => onEdit && onEdit(item)}>
       {/* Category Icon */}
       <View style={[styles.iconCircle, { backgroundColor: `${categoryColor}18` }]}>
         <Ionicons name={iconName} size={20} color={categoryColor} />
@@ -55,21 +58,33 @@ export function TransactionItem({ item, onDelete }: TransactionItemProps) {
         ) : null}
       </View>
 
-      {/* Amount & Delete */}
+      {/* Amount & Actions */}
       <View style={styles.rightSection}>
         <Text style={[styles.amount, isIncome ? styles.incomeText : styles.expenseText]}>
           {isIncome ? `+${formatCurrency(item.amount)}` : `-${formatCurrency(item.amount)}`}
         </Text>
-        {onDelete ? (
-          <Pressable
-            hitSlop={8}
-            onPress={handleDelete}
-            style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}>
-            <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
-          </Pressable>
-        ) : null}
+
+        <View style={styles.actionRow}>
+          {onEdit ? (
+            <Pressable
+              hitSlop={8}
+              onPress={() => onEdit(item)}
+              style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="pencil-outline" size={15} color={colors.primary} />
+            </Pressable>
+          ) : null}
+
+          {onDelete ? (
+            <Pressable
+              hitSlop={8}
+              onPress={handleDelete}
+              style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -82,6 +97,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+  },
+  containerPressed: {
+    backgroundColor: colors.surfaceHover,
   },
   iconCircle: {
     width: 44,
@@ -140,11 +158,13 @@ const styles = StyleSheet.create({
   expenseText: {
     color: colors.expenseDark,
   },
-  deleteBtn: {
-    marginTop: 4,
-    padding: 2,
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 5,
   },
-  deleteBtnPressed: {
-    opacity: 0.6,
+  actionIconBtn: {
+    padding: 3,
   },
 });

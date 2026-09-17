@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,17 +10,20 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { parseCurrencyInput } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { TransactionType } from '@/types';
 
 export default function AddTransactionModal() {
   const router = useRouter();
-  const { categories, createTransaction } = useFinance();
+  const params = useLocalSearchParams<{ id?: string }>();
+  const isEditing = !!params.id;
+
+  const { categories, transactions, createTransaction, editTransaction } = useFinance();
 
   const [type, setType] = useState<TransactionType>('expense');
   const [rawAmount, setRawAmount] = useState<string>('');
@@ -28,12 +31,29 @@ export default function AddTransactionModal() {
   const [date, setDate] = useState<string>(getTodayISO());
   const [notes, setNotes] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [existingCreatedAt, setExistingCreatedAt] = useState<number>(Date.now());
+
+  // If editing, pre-fill form
+  useEffect(() => {
+    if (params.id) {
+      const existing = transactions.find((t) => t.id === params.id);
+      if (existing) {
+        setType(existing.type);
+        setRawAmount(existing.amount ? existing.amount.toString() : '');
+        setTitle(existing.title || '');
+        setDate(existing.date || getTodayISO());
+        setNotes(existing.notes || '');
+        setSelectedCategory(existing.category_id || '');
+        setExistingCreatedAt(existing.created_at || Date.now());
+      }
+    }
+  }, [params.id, transactions]);
 
   // Filter categories by type
   const availableCategories = categories.filter((c) => c.type === type);
 
   // Set default category if none selected
-  React.useEffect(() => {
+  useEffect(() => {
     if (availableCategories.length > 0 && (!selectedCategory || !availableCategories.find((c) => c.id === selectedCategory))) {
       setSelectedCategory(availableCategories[0].id);
     }
@@ -43,8 +63,6 @@ export default function AddTransactionModal() {
     const num = parseCurrencyInput(text);
     setRawAmount(num > 0 ? num.toString() : '');
   };
-
-  const displayAmount = rawAmount ? formatCurrency(parseInt(rawAmount, 10)) : '';
 
   const handleSubmit = async () => {
     const amount = parseInt(rawAmount, 10);
@@ -62,18 +80,31 @@ export default function AddTransactionModal() {
     }
 
     try {
-      await createTransaction({
-        title: title.trim(),
-        amount,
-        type,
-        category_id: selectedCategory,
-        date,
-        notes: notes.trim() || null,
-      });
+      if (isEditing && params.id) {
+        await editTransaction({
+          id: params.id,
+          title: title.trim(),
+          amount,
+          type,
+          category_id: selectedCategory,
+          date,
+          notes: notes.trim() || null,
+          created_at: existingCreatedAt,
+        });
+      } else {
+        await createTransaction({
+          title: title.trim(),
+          amount,
+          type,
+          category_id: selectedCategory,
+          date,
+          notes: notes.trim() || null,
+        });
+      }
       router.back();
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Gagal menyimpan transaksi');
+      Alert.alert('Error', isEditing ? 'Gagal memperbarui transaksi.' : 'Gagal menyimpan transaksi.');
     }
   };
 
@@ -86,7 +117,7 @@ export default function AddTransactionModal() {
         <Pressable onPress={() => router.back()} hitSlop={10} style={styles.closeBtn}>
           <Ionicons name="close" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Catat Transaksi</Text>
+        <Text style={styles.headerTitle}>{isEditing ? 'Edit Transaksi' : 'Catat Transaksi'}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -135,7 +166,7 @@ export default function AddTransactionModal() {
               placeholderTextColor={colors.textMuted}
               value={rawAmount ? parseInt(rawAmount, 10).toLocaleString('id-ID') : ''}
               onChangeText={handleAmountChange}
-              autoFocus
+              autoFocus={!isEditing}
             />
           </View>
         </View>
@@ -238,7 +269,9 @@ export default function AddTransactionModal() {
           style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
           onPress={handleSubmit}>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-          <Text style={styles.submitBtnText}>Simpan Transaksi</Text>
+          <Text style={styles.submitBtnText}>
+            {isEditing ? 'Simpan Perubahan' : 'Simpan Transaksi'}
+          </Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
