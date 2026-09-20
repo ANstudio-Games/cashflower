@@ -7,7 +7,6 @@
 [![React Native](https://img.shields.io/badge/React%20Native-0.86-61DAFB.svg?logo=react)](#)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(Local)-003B57.svg?logo=sqlite)](#)
 [![Offline First](https://img.shields.io/badge/Internet-100%25%20Offline-success.svg)](#)
-[![License](https://img.shields.io/badge/license-Open%20Source-blue.svg)](#)
 
 ---
 
