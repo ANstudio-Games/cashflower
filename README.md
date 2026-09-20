@@ -7,6 +7,7 @@
 [![React Native](https://img.shields.io/badge/React%20Native-0.86-61DAFB.svg?logo=react)](#)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(Local)-003B57.svg?logo=sqlite)](#)
 [![Offline First](https://img.shields.io/badge/Internet-100%25%20Offline-success.svg)](#)
+[![Status](https://img.shields.io/badge/Status-Internal%20%2F%20Proprietary-red.svg)](#)
 
 ---
 
@@ -24,6 +25,7 @@
 5. [Struktur Direktori & Arsitektur (Untuk Developer)](#-struktur-direktori--arsitektur-untuk-developer)
 6. [Panduan Menjalankan Project (Developer Quick Start)](#-panduan-menjalankan-project-developer-quick-start)
 7. [Tanya Jawab (FAQ) & Kendala Teknis](#-tanya-jawab-faq--kendala-teknis)
+8. [Hak Cipta & Kerahasiaan](#-hak-cipta--kerahasiaan-proprietary--internal-use)
 
 ---
 
@@ -289,9 +291,12 @@ npx eas-cli build -p android --profile preview
 
 ---
 
-## 📄 Lisensi
+## 🔒 Hak Cipta & Kerahasiaan (Proprietary / Internal Use)
 
-Proyek ini bersifat terbuka (*Open Source*) dan bebas digunakan untuk keperluan pribadi, pencatatan usaha UMKM, maupun operasional bisnis Anda.
+Aplikasi dan seluruh kode sumber dalam repositori ini bersifat **Internal & Proprietary (Tertutup)**.
+* Proyek ini ditujukan **khusus untuk penggunaan operasional internal tim / bisnis perusahaan**.
+* **Proyek ini BUKAN open source**.
+* Dilarang keras menyalin, mendistribusikan ulang, memodifikasi untuk publikasi luar, atau memperjualbelikan kode sumber dan aset aplikasi ini tanpa izin tertulis dari pemilik proyek.
 
 ---
 

@@ -1,6 +1,7 @@
 {
   "name": "cashflower",
-  "license": "0BSD",
+  "private": true,
+  "license": "UNLICENSED",
   "main": "expo-router/entry",
   "version": "57.0.25",
   "dependencies": {
