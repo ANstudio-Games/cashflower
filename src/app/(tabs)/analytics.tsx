@@ -1,5 +1,6 @@
 import React, { useMemo, Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
@@ -37,6 +38,7 @@ class ChartErrorBoundary extends Component<{ children: ReactNode; title: string 
 }
 
 export default function AnalyticsScreen() {
+  const router = useRouter();
   const { transactions, categories, cashflowSummary } = useFinance();
 
   // Safe category breakdown calculation
@@ -84,10 +86,16 @@ export default function AnalyticsScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Grafik & Analisis</Text>
           <Text style={styles.headerSubtitle}>Visualisasi arus kas dan pola pengeluaran</Text>
         </View>
+        <Pressable
+          style={({ pressed }) => [styles.exportHeaderBtn, pressed && { opacity: 0.8 }]}
+          onPress={() => router.push('/modal/export-report')}>
+          <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+          <Text style={styles.exportHeaderBtnText}>Ekspor</Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -161,9 +169,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 10,
+  },
+  exportHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+  },
+  exportHeaderBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   headerTitle: {
     fontSize: 22,

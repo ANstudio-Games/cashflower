@@ -43,6 +43,10 @@ export default function RootLayout() {
               name="modal/budget"
               options={{ presentation: 'modal', headerShown: false }}
             />
+            <Stack.Screen
+              name="modal/export-report"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
           </Stack>
         </FinanceProvider>
       </SQLiteProvider>

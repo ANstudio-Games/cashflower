@@ -125,6 +125,23 @@ export default function SettingsModal() {
           </Pressable>
         </View>
 
+        {/* Section: Ekspor Laporan */}
+        <Text style={styles.sectionHeader}>LAPORAN & DOKUMEN</Text>
+        <View style={styles.cardGroup}>
+          <Pressable
+            style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/modal/export-report')}>
+            <View style={[styles.iconWrap, { backgroundColor: '#FEF2F2' }]}>
+              <Ionicons name="document-text-outline" size={20} color="#DC2626" />
+            </View>
+            <View style={styles.actionInfo}>
+              <Text style={styles.actionTitle}>Ekspor Laporan Keuangan</Text>
+              <Text style={styles.actionDesc}>Cetak PDF resmi atau simpan spreadsheet Excel/CSV</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
+
         {/* Section: Target Budgeting */}
         <Text style={styles.sectionHeader}>PERENCANAAN ANGGARAN</Text>
         <View style={styles.cardGroup}>

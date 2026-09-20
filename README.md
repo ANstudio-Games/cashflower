@@ -22,6 +22,7 @@
    - [4. Melihat Grafik & Evaluasi Keuangan](#4-melihat-grafik--evaluasi-keuangan)
    - [5. Mencadangkan & Memulihkan Data (Backup & Restore)](#5-mencadangkan--memulihkan-data-backup--restore)
    - [6. Jurnal Trading & Investasi (Opsional)](#6-jurnal-trading--investasi-opsional)
+   - [7. Mengekspor Laporan Keuangan (Setoran ke Atasan / Excel)](#7-mengekspor-laporan-keuangan-setoran-ke-atasan--excel)
 5. [Struktur Direktori & Arsitektur (Untuk Developer)](#-struktur-direktori--arsitektur-untuk-developer)
 6. [Panduan Menjalankan Project (Developer Quick Start)](#-panduan-menjalankan-project-developer-quick-start)
 7. [Tanya Jawab (FAQ) & Kendala Teknis](#-tanya-jawab-faq--kendala-teknis)
@@ -51,6 +52,7 @@
 | **📊 Target Anggaran (Budgeting)** | Pemasangan batas maksimal belanja bulanan (secara global maupun per kategori) dengan indikator visual otomatis agar tidak boros. |
 | **📈 Grafik & Analisis** | Visualisasi diagram donat pengeluaran per pos kategori dan grafik batang perbandingan arus kas berkala. |
 | **💹 Trading & Investasi** | Jurnal pencatatan aset (Saham, Kripto, Forex, Emas, Reksa Dana) dengan kalkulasi otomatis PnL (laba/rugi) dan Win Rate. |
+| **📄 Ekspor Laporan Resmi** | Cetak laporan PDF resmi siap setor ke atasan (dengan kartu ringkasan, breakdown kategori, & kolom tanda tangan) atau spreadsheet Excel/CSV. |
 | **☁️ Backup & Restore** | Cadangkan seluruh database dalam format file `.json` ke Google Drive, WhatsApp, atau penyimpanan lokal untuk dipulihkan sewaktu-waktu. |
 | **🔔 Pengingat Otomatis** | Notifikasi harian pukul 20:00 malam untuk mencatat transaksi hari itu serta alarm peringatan jatuh tempo pinjaman. |
 
@@ -157,6 +159,18 @@ Bagi pengguna yang ingin memonitor portofolio instrumen finansial:
 
 ---
 
+### 7. Mengekspor Laporan Keuangan (Setoran ke Atasan / Excel)
+Jika pegawai atau staf kasir perlu menyetorkan pembukuan kas ke atasan/owner:
+1. Masuk ke tab **Transaksi** atau **Grafik**, lalu ketuk tombol **Ekspor** di pojok kanan atas (atau buka **Pengaturan** ➡️ **Ekspor Laporan Keuangan**).
+2. Pilih format yang dibutuhkan:
+   * 📄 **Dokumen PDF Resmi:** Format profesional siap cetak / kirim langsung via WhatsApp dengan kop usaha, ringkasan Laba/Rugi, tabel breakdown pos belanja, dan kolom tanda tangan pengesahan staf & atasan.
+   * 📊 **Spreadsheet Excel / CSV:** Format data tabel mentah berstandar UTF-8 yang dapat diolah lebih lanjut di Microsoft Excel atau Google Sheets.
+3. Pilih periode waktu (*Bulan Ini*, *Bulan Lalu*, *3 Bulan*, atau *Rentang Tanggal Kustom*).
+4. Masukkan nama usaha dan nama pelapor (opsional).
+5. Ketuk **Cetak & Bagikan Laporan**. Dokumen akan langsung siap dikirimkan ke chat atasan atau disimpan ke Google Drive.
+
+---
+
 ## 🧱 Struktur Direktori & Arsitektur (Untuk Developer)
 
 Aplikasi dibangun menggunakan **React Native** dengan framework **Expo Router**, arsitektur berlapis yang rapi dan mudah dirawat:
@@ -181,6 +195,7 @@ cashflower/
 │   │   │   ├── add-investment.tsx  # Form Tambah Trading Aset
 │   │   │   ├── add-category.tsx    # Form Kategori Kustom
 │   │   │   ├── budget.tsx          # Form Pengaturan Target Anggaran
+│   │   │   ├── export-report.tsx   # Form Ekspor Laporan Resmi (PDF & Excel)
 │   │   │   └── settings.tsx        # Halaman Pengaturan, Notifikasi & Backup
 │   │   └── _layout.tsx         # Root Layout & Provider Context
 │   ├── components/             # Komponen UI Reusable
@@ -203,7 +218,9 @@ cashflower/
 │       ├── backup.ts           # Logika Export JSON & Sharing Document
 │       ├── format-currency.ts  # Formatter Rupiah (IDR) & Parser Input
 │       ├── format-date.ts      # Formatter Tanggal (Indonesia)
-│       └── notifications.ts    # Penjadwal Pengingat Notifikasi Lokal
+│       ├── notifications.ts    # Penjadwal Pengingat Notifikasi Lokal
+│       ├── report-csv.ts       # Generator File Spreadsheet Excel/CSV (UTF-8)
+│       └── report-pdf.ts       # Generator Dokumen PDF Resmi & Template HTML Cetak
 ├── app.json                    # Konfigurasi Expo & Metadata Aplikasi
 ├── eas.json                    # Konfigurasi EAS Build & Profil Rilis APK
 ├── package.json                # Daftar Dependensi & Script Node.js

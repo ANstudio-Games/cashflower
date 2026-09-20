@@ -56,17 +56,24 @@ export default function TransactionsScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Riwayat Transaksi</Text>
           <Text style={styles.headerSubtitle}>
             {filteredTransactions.length} dari {transactions.length} transaksi tercatat
           </Text>
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.8 }]}
-          onPress={() => router.push('/modal/add-transaction')}>
-          <Ionicons name="add" size={22} color="#FFFFFF" />
-        </Pressable>
+        <View style={styles.headerRightActions}>
+          <Pressable
+            style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/modal/export-report')}>
+            <Ionicons name="document-text-outline" size={18} color={colors.primaryDark} />
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/modal/add-transaction')}>
+            <Ionicons name="add" size={22} color="#FFFFFF" />
+          </Pressable>
+        </View>
       </View>
 
       {/* Search Input */}
@@ -221,6 +228,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exportBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addBtn: {
     width: 40,
