@@ -21,7 +21,7 @@ export default function SettingsModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
-  const { backupData, restoreData, transactions, debts, investments } = useFinance();
+  const { backupData, restoreData, transactions, debts, investments, plans } = useFinance();
 
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
   const [debtReminderEnabled, setDebtReminderEnabled] = useState(true);
@@ -142,9 +142,24 @@ export default function SettingsModal() {
           </Pressable>
         </View>
 
-        {/* Section: Target Budgeting */}
-        <Text style={styles.sectionHeader}>PERENCANAAN ANGGARAN</Text>
+        {/* Section: Target Budgeting & Rencana */}
+        <Text style={styles.sectionHeader}>PERENCANAAN & TARGET</Text>
         <View style={styles.cardGroup}>
+          <Pressable
+            style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/modal/plans')}>
+            <View style={[styles.iconWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="star-outline" size={20} color="#F59E0B" />
+            </View>
+            <View style={styles.actionInfo}>
+              <Text style={styles.actionTitle}>Target Pembelian & Rencana</Text>
+              <Text style={styles.actionDesc}>Wishlist barang impian & progres saldo kas</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+
+          <View style={styles.rowDivider} />
+
           <Pressable
             style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}
             onPress={() => router.push('/modal/budget')}>
@@ -214,11 +229,16 @@ export default function SettingsModal() {
             <Text style={styles.statsLabel}>Total Catatan Trading</Text>
             <Text style={styles.statsVal}>{investments.length} data</Text>
           </View>
+          <View style={styles.rowDivider} />
+          <View style={styles.statsRow}>
+            <Text style={styles.statsLabel}>Total Target Rencana</Text>
+            <Text style={styles.statsVal}>{plans.length} data</Text>
+          </View>
         </View>
 
         {/* Info App */}
         <View style={styles.footerInfo}>
-          <Text style={styles.appName}>🌸 Cashflower v1.1.1</Text>
+          <Text style={styles.appName}>🌸 Cashflower v1.2.0</Text>
           <Text style={styles.appSub}>100% Offline-First • Aman & Privat di HP</Text>
         </View>
       </ScrollView>

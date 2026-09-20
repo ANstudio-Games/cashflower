@@ -5,6 +5,7 @@ import {
   Debt,
   Investment,
   Budget,
+  FinancialPlan,
   BackupData,
   CashflowSummary,
   DebtSummary,
@@ -90,6 +91,20 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       category_id TEXT,
       monthly_limit REAL NOT NULL,
       created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS financial_plans (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      target_amount REAL NOT NULL,
+      category_id TEXT,
+      target_date TEXT,
+      is_pinned INTEGER NOT NULL DEFAULT 0,
+      is_completed INTEGER NOT NULL DEFAULT 0,
+      completed_at INTEGER,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (category_id) REFERENCES categories (id)
     );
   `);
 
@@ -457,25 +472,117 @@ export async function deleteBudget(db: SQLite.SQLiteDatabase, id: string): Promi
   await db.runAsync('DELETE FROM budgets WHERE id = ?', [id]);
 }
 
+// ------------------- Financial Plan & Wishlist Operations -------------------
+
+export async function getPlans(
+  db: SQLite.SQLiteDatabase,
+  options?: { isCompleted?: boolean; isPinned?: boolean }
+): Promise<FinancialPlan[]> {
+  let query = `
+    SELECT p.*, c.name as category_name, c.icon as category_icon, c.color as category_color
+    FROM financial_plans p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE 1=1
+  `;
+  const params: any[] = [];
+
+  if (options?.isCompleted !== undefined) {
+    query += ' AND p.is_completed = ?';
+    params.push(options.isCompleted ? 1 : 0);
+  }
+  if (options?.isPinned !== undefined) {
+    query += ' AND p.is_pinned = ?';
+    params.push(options.isPinned ? 1 : 0);
+  }
+
+  query += ' ORDER BY p.is_pinned DESC, p.target_amount ASC, p.created_at DESC';
+  return await db.getAllAsync<FinancialPlan>(query, params);
+}
+
+export async function getPlanById(db: SQLite.SQLiteDatabase, id: string): Promise<FinancialPlan | null> {
+  return await db.getFirstAsync<FinancialPlan>(
+    `SELECT p.*, c.name as category_name, c.icon as category_icon, c.color as category_color
+     FROM financial_plans p
+     LEFT JOIN categories c ON p.category_id = c.id
+     WHERE p.id = ?`,
+    [id]
+  );
+}
+
+export async function addPlan(db: SQLite.SQLiteDatabase, plan: FinancialPlan): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO financial_plans (id, title, target_amount, category_id, target_date, is_pinned, is_completed, completed_at, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      plan.id,
+      plan.title,
+      plan.target_amount,
+      plan.category_id ?? null,
+      plan.target_date ?? null,
+      plan.is_pinned ?? 0,
+      plan.is_completed ?? 0,
+      plan.completed_at ?? null,
+      plan.notes ?? null,
+      plan.created_at || Date.now(),
+    ]
+  );
+}
+
+export async function updatePlan(db: SQLite.SQLiteDatabase, plan: FinancialPlan): Promise<void> {
+  await db.runAsync(
+    `UPDATE financial_plans 
+     SET title = ?, target_amount = ?, category_id = ?, target_date = ?, is_pinned = ?, is_completed = ?, completed_at = ?, notes = ?
+     WHERE id = ?`,
+    [
+      plan.title,
+      plan.target_amount,
+      plan.category_id ?? null,
+      plan.target_date ?? null,
+      plan.is_pinned ?? 0,
+      plan.is_completed ?? 0,
+      plan.completed_at ?? null,
+      plan.notes ?? null,
+      plan.id,
+    ]
+  );
+}
+
+export async function togglePlanPinned(db: SQLite.SQLiteDatabase, id: string, isPinned: boolean): Promise<void> {
+  await db.runAsync('UPDATE financial_plans SET is_pinned = ? WHERE id = ?', [isPinned ? 1 : 0, id]);
+}
+
+export async function completePlan(db: SQLite.SQLiteDatabase, id: string, isCompleted: boolean): Promise<void> {
+  await db.runAsync(
+    'UPDATE financial_plans SET is_completed = ?, completed_at = ? WHERE id = ?',
+    [isCompleted ? 1 : 0, isCompleted ? Date.now() : null, id]
+  );
+}
+
+export async function deletePlan(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM financial_plans WHERE id = ?', [id]);
+}
+
 // ------------------- Backup & Restore Operations -------------------
 
 export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupData> {
-  const [categories, transactions, debts, investments, budgets] = await Promise.all([
+  const [categories, transactions, debts, investments, budgets, plans] = await Promise.all([
     db.getAllAsync<Category>('SELECT * FROM categories'),
     db.getAllAsync<Transaction>('SELECT * FROM transactions'),
     db.getAllAsync<Debt>('SELECT * FROM debts'),
     db.getAllAsync<Investment>('SELECT * FROM investments'),
     db.getAllAsync<Budget>('SELECT * FROM budgets'),
+    db.getAllAsync<FinancialPlan>('SELECT * FROM financial_plans'),
   ]);
 
   return {
-    version: '1.1.0',
+    version: '1.2.0',
     exported_at: new Date().toISOString(),
     categories,
     transactions,
     debts,
     investments,
     budgets,
+    plans,
   };
 }
 
@@ -487,6 +594,7 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
       DELETE FROM debts;
       DELETE FROM investments;
       DELETE FROM budgets;
+      DELETE FROM financial_plans;
     `);
 
     // Restore categories
@@ -538,6 +646,28 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
         await db.runAsync(
           'INSERT OR REPLACE INTO budgets (id, category_id, monthly_limit, created_at) VALUES (?, ?, ?, ?)',
           [b.id, b.category_id ?? null, b.monthly_limit, b.created_at || Date.now()]
+        );
+      }
+    }
+
+    // Restore financial plans
+    if (Array.isArray(backup.plans)) {
+      for (const p of backup.plans) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO financial_plans (id, title, target_amount, category_id, target_date, is_pinned, is_completed, completed_at, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            p.id,
+            p.title,
+            p.target_amount,
+            p.category_id ?? null,
+            p.target_date ?? null,
+            p.is_pinned ?? 0,
+            p.is_completed ?? 0,
+            p.completed_at ?? null,
+            p.notes ?? null,
+            p.created_at || Date.now(),
+          ]
         );
       }
     }

@@ -2,7 +2,7 @@
 
 > **Aplikasi Pencatatan Keuangan, Arus Kas (Cash Flow), Hutang-Piutang, dan Jurnal Investasi Berbasis Offline-First.**
 
-[![Version](https://img.shields.io/badge/version-1.1.1-teal.svg)](#)
+[![Version](https://img.shields.io/badge/version-1.2.0-teal.svg)](#)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2057-000020.svg?logo=expo)](#)
 [![React Native](https://img.shields.io/badge/React%20Native-0.86-61DAFB.svg?logo=react)](#)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(Local)-003B57.svg?logo=sqlite)](#)
@@ -23,6 +23,7 @@
    - [5. Mencadangkan & Memulihkan Data (Backup & Restore)](#5-mencadangkan--memulihkan-data-backup--restore)
    - [6. Jurnal Trading & Investasi (Opsional)](#6-jurnal-trading--investasi-opsional)
    - [7. Mengekspor Laporan Keuangan (Setoran ke Atasan / Excel)](#7-mengekspor-laporan-keuangan-setoran-ke-atasan--excel)
+   - [8. Mengatur Target Pembelian & Rencana Impian (Plans)](#8-mengatur-target-pembelian--rencana-impian-plans)
 5. [Struktur Direktori & Arsitektur (Untuk Developer)](#-struktur-direktori--arsitektur-untuk-developer)
 6. [Panduan Menjalankan Project (Developer Quick Start)](#-panduan-menjalankan-project-developer-quick-start)
 7. [Tanya Jawab (FAQ) & Kendala Teknis](#-tanya-jawab-faq--kendala-teknis)
@@ -52,6 +53,7 @@
 | **📊 Target Anggaran (Budgeting)** | Pemasangan batas maksimal belanja bulanan (secara global maupun per kategori) dengan indikator visual otomatis agar tidak boros. |
 | **📈 Grafik & Analisis** | Visualisasi diagram donat pengeluaran per pos kategori dan grafik batang perbandingan arus kas berkala. |
 | **💹 Trading & Investasi** | Jurnal pencatatan aset (Saham, Kripto, Forex, Emas, Reksa Dana) dengan kalkulasi otomatis PnL (laba/rugi) dan Win Rate. |
+| **🎯 Target & Rencana Impian** | Wishlist barang yang ingin dibeli (e.g. Laptop, Kendaraan) dengan progres dana otomatis dari saldo kas kas berjalan serta fitur pin ke Beranda. |
 | **📄 Ekspor Laporan Resmi** | Cetak laporan PDF resmi siap setor ke atasan (dengan kartu ringkasan, breakdown kategori, & kolom tanda tangan) atau spreadsheet Excel/CSV. |
 | **☁️ Backup & Restore** | Cadangkan seluruh database dalam format file `.json` ke Google Drive, WhatsApp, atau penyimpanan lokal untuk dipulihkan sewaktu-waktu. |
 | **🔔 Pengingat Otomatis** | Notifikasi harian pukul 20:00 malam untuk mencatat transaksi hari itu serta alarm peringatan jatuh tempo pinjaman. |
@@ -171,6 +173,17 @@ Jika pegawai atau staf kasir perlu menyetorkan pembukuan kas ke atasan/owner:
 
 ---
 
+### 8. Mengatur Target Pembelian & Rencana Impian (Plans)
+Untuk memotivasi dan memonitor kesiapan dana membeli barang impian (misal: Laptop kerja baru, perlengkapan toko, renovasi, kendaraan):
+1. Buka kartu **Target Pembelian & Rencana** di Beranda (atau buka **Pengaturan** ➡️ **Target Pembelian & Rencana**).
+2. Ketuk **+ Pasang Target Baru**.
+3. Masukkan nama barang/kebutuhan, target harga (nominal Rp), kategori pengeluaran, dan aktifkan opsi **Sematkan ke Beranda (⭐ Pin)**.
+4. **Progres Otomatis Berjalan:** Persentase dan kesiapan uang otomatis dihitung terhadap **Saldo Kas Berjalan Saat Ini** (Total Pemasukan - Pengeluaran).
+5. Bila saldo kas Anda sudah mencukupi target belanja, badge status berubah menjadi 🟢 **Dana Siap Dibeli!**.
+6. Ketuk **Beli & Catat Pengeluaran** untuk menandai target selesai sekaligus memotong kas pembukuan secara otomatis.
+
+---
+
 ## 🧱 Struktur Direktori & Arsitektur (Untuk Developer)
 
 Aplikasi dibangun menggunakan **React Native** dengan framework **Expo Router**, arsitektur berlapis yang rapi dan mudah dirawat:
@@ -184,7 +197,7 @@ cashflower/
 │   ├── app/                    # Sistem navigasi file-based (Expo Router)
 │   │   ├── (tabs)/             # Halaman utama dengan Bottom Tab Bar
 │   │   │   ├── _layout.tsx     # Pengaturan Bottom Tabs (Beranda, Transaksi, Grafik, Hutang, Investasi)
-│   │   │   ├── index.tsx       # Halaman Beranda (Saldo, Snapshot, Transaksi Terakhir)
+│   │   │   ├── index.tsx       # Halaman Beranda (Saldo, Snapshot, Target Impian, Transaksi)
 │   │   │   ├── transactions.tsx# Halaman Riwayat Transaksi & Filter
 │   │   │   ├── analytics.tsx   # Halaman Grafik & Analitik Pengeluaran
 │   │   │   ├── debts.tsx       # Halaman Manajemen Hutang & Piutang
@@ -194,6 +207,8 @@ cashflower/
 │   │   │   ├── add-debt.tsx        # Form Tambah Hutang/Piutang
 │   │   │   ├── add-investment.tsx  # Form Tambah Trading Aset
 │   │   │   ├── add-category.tsx    # Form Kategori Kustom
+│   │   │   ├── add-plan.tsx        # Form Tambah & Edit Target Pembelian
+│   │   │   ├── plans.tsx           # Layar Pengelolaan Penuh Target & Rencana
 │   │   │   ├── budget.tsx          # Form Pengaturan Target Anggaran
 │   │   │   ├── export-report.tsx   # Form Ekspor Laporan Resmi (PDF & Excel)
 │   │   │   └── settings.tsx        # Halaman Pengaturan, Notifikasi & Backup
@@ -204,6 +219,7 @@ cashflower/
 │   │   ├── category-donut-chart.tsx # Diagram Donat Kategori
 │   │   ├── debt-item.tsx            # Komponen Kartu Hutang/Piutang
 │   │   ├── investment-item.tsx      # Komponen Kartu Investasi
+│   │   ├── plan-item.tsx            # Komponen Kartu Target Rencana & Progres
 │   │   ├── transaction-item.tsx     # Komponen Baris Transaksi
 │   │   └── empty-state.tsx          # Tampilan saat data kosong
 │   ├── context/

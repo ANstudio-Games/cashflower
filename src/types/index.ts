@@ -88,6 +88,22 @@ export interface InvestmentSummary {
   netReturnPercentage: number;
 }
 
+export interface FinancialPlan {
+  id: string;
+  title: string;             // Nama barang / rencana (e.g. Beli Laptop ROG)
+  target_amount: number;     // Nominal target Rp
+  category_id?: string | null;
+  target_date?: string | null; // YYYY-MM-DD
+  is_pinned: number;         // 0: tidak, 1: pin di beranda
+  is_completed: number;      // 0: aktif, 1: tercapai/dibeli
+  completed_at?: number | null;
+  notes?: string | null;
+  created_at: number;
+  category_name?: string;
+  category_icon?: string;
+  category_color?: string;
+}
+
 export interface BackupData {
   version: string;
   exported_at: string;
@@ -96,4 +112,5 @@ export interface BackupData {
   debts: Debt[];
   investments: Investment[];
   budgets: Budget[];
+  plans?: FinancialPlan[];
 }

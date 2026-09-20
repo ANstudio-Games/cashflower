@@ -7,6 +7,7 @@ import {
   Debt,
   Investment,
   Budget,
+  FinancialPlan,
   CashflowSummary,
   DebtSummary,
   InvestmentSummary,
@@ -31,6 +32,12 @@ import {
   getBudgets,
   saveBudget,
   deleteBudget,
+  getPlans,
+  addPlan,
+  updatePlan,
+  togglePlanPinned,
+  completePlan,
+  deletePlan,
 } from '@/db';
 import { backupToGoogleDriveOrShare, restoreFromBackupFile } from '@/utils/backup';
 import { scheduleDailyReminder, scheduleDebtReminder } from '@/utils/notifications';
@@ -42,6 +49,7 @@ interface FinanceContextType {
   debts: Debt[];
   investments: Investment[];
   budgets: Budget[];
+  plans: FinancialPlan[];
   cashflowSummary: CashflowSummary;
   debtSummary: DebtSummary;
   investmentSummary: InvestmentSummary;
@@ -57,6 +65,11 @@ interface FinanceContextType {
   deleteInvestmentById: (id: string) => Promise<void>;
   saveNewBudget: (budget: { id: string; category_id: string | null; monthly_limit: number }) => Promise<void>;
   removeBudget: (id: string) => Promise<void>;
+  createPlan: (item: Omit<FinancialPlan, 'id' | 'created_at' | 'is_completed' | 'completed_at' | 'category_name' | 'category_icon' | 'category_color'>) => Promise<void>;
+  editPlan: (item: Omit<FinancialPlan, 'created_at' | 'category_name' | 'category_icon' | 'category_color'>) => Promise<void>;
+  togglePinPlan: (id: string, isPinned: boolean) => Promise<void>;
+  fulfillPlan: (id: string, recordExpense: boolean) => Promise<void>;
+  deletePlanById: (id: string) => Promise<void>;
   backupData: () => Promise<boolean>;
   restoreData: () => Promise<number>;
 }
@@ -71,6 +84,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [plans, setPlans] = useState<FinancialPlan[]>([]);
 
   const [cashflowSummary, setCashflowSummary] = useState<CashflowSummary>({
     totalIncome: 0,
@@ -105,6 +119,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         fetchedInvestments,
         fetchedInvSum,
         fetchedBudgets,
+        fetchedPlans,
       ] = await Promise.all([
         getCategories(db),
         getTransactions(db),
@@ -114,6 +129,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         getInvestments(db),
         getInvestmentSummary(db),
         getBudgets(db),
+        getPlans(db),
       ]);
 
       setCategories(fetchedCategories);
@@ -124,6 +140,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setInvestments(fetchedInvestments);
       setInvestmentSummary(fetchedInvSum);
       setBudgets(fetchedBudgets);
+      setPlans(fetchedPlans);
     } catch (err) {
       console.error('Error refreshing finance data:', err);
     } finally {
@@ -243,6 +260,90 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await refreshAll();
   };
 
+  const createPlan = async (
+    item: Omit<FinancialPlan, 'id' | 'created_at' | 'is_completed' | 'completed_at' | 'category_name' | 'category_icon' | 'category_color'>
+  ) => {
+    try {
+      const id = `plan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await addPlan(db, {
+        ...item,
+        id,
+        is_completed: 0,
+        completed_at: null,
+        created_at: Date.now(),
+      });
+      triggerHaptic();
+      await refreshAll();
+    } catch (err) {
+      console.error('Error creating plan:', err);
+      throw err;
+    }
+  };
+
+  const editPlan = async (
+    item: Omit<FinancialPlan, 'created_at' | 'category_name' | 'category_icon' | 'category_color'>
+  ) => {
+    try {
+      await updatePlan(db, item as FinancialPlan);
+      triggerHaptic();
+      await refreshAll();
+    } catch (err) {
+      console.error('Error updating plan:', err);
+      throw err;
+    }
+  };
+
+  const togglePinPlan = async (id: string, isPinned: boolean) => {
+    try {
+      await togglePlanPinned(db, id, isPinned);
+      triggerHaptic();
+      await refreshAll();
+    } catch (err) {
+      console.error('Error toggling plan pin:', err);
+      throw err;
+    }
+  };
+
+  const fulfillPlan = async (id: string, recordExpense: boolean) => {
+    try {
+      const plan = plans.find((p) => p.id === id);
+      if (!plan) return;
+
+      if (recordExpense) {
+        const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const today = new Date().toISOString().split('T')[0];
+        await addTransaction(db, {
+          id: txId,
+          title: `Beli: ${plan.title}`,
+          amount: plan.target_amount,
+          type: 'expense',
+          category_id: plan.category_id || 'cat_shopping',
+          date: today,
+          notes: plan.notes ? `Target impian tercapai. ${plan.notes}` : 'Target impian tercapai.',
+          created_at: Date.now(),
+        });
+      }
+
+      await completePlan(db, id, true);
+      triggerHaptic();
+      await refreshAll();
+    } catch (err) {
+      console.error('Error fulfilling plan:', err);
+      throw err;
+    }
+  };
+
+  const deletePlanById = async (id: string) => {
+    try {
+      await deletePlan(db, id);
+      triggerHaptic();
+      await refreshAll();
+    } catch (err) {
+      console.error('Error deleting plan:', err);
+      throw err;
+    }
+  };
+
   const backupData = async () => {
     return await backupToGoogleDriveOrShare(db);
   };
@@ -264,6 +365,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         debts,
         investments,
         budgets,
+        plans,
         cashflowSummary,
         debtSummary,
         investmentSummary,
@@ -279,6 +381,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         deleteInvestmentById,
         saveNewBudget,
         removeBudget,
+        createPlan,
+        editPlan,
+        togglePinPlan,
+        fulfillPlan,
+        deletePlanById,
         backupData,
         restoreData,
       }}>

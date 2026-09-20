@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { BalanceCard } from '@/components/balance-card';
 import { TransactionItem } from '@/components/transaction-item';
+import { PlanItem } from '@/components/plan-item';
 import { EmptyState } from '@/components/empty-state';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
@@ -25,6 +26,7 @@ export default function HomeScreen() {
     debtSummary,
     investmentSummary,
     budgets,
+    plans,
     deleteTransactionById,
     refreshAll,
   } = useFinance();
@@ -38,6 +40,9 @@ export default function HomeScreen() {
   };
 
   const recentTransactions = transactions.slice(0, 5);
+
+  const activePlans = React.useMemo(() => (plans || []).filter((p) => p.is_completed === 0), [plans]);
+  const pinnedPlans = React.useMemo(() => activePlans.filter((p) => p.is_pinned === 1), [activePlans]);
 
   const globalBudget = budgets.find((b) => b.category_id === null);
   const spent = globalBudget?.current_spent || 0;
@@ -129,6 +134,63 @@ export default function HomeScreen() {
             </View>
           ) : null}
         </Pressable>
+
+        {/* Pinned Plans / Financial Goals Widget */}
+        <View style={[styles.plansWidget, shadowStyles.sm]}>
+          <View style={styles.plansWidgetHeader}>
+            <View style={styles.plansWidgetLeft}>
+              <View style={[styles.plansIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="star" size={16} color="#F59E0B" />
+              </View>
+              <View>
+                <Text style={styles.plansWidgetTitle}>Target Pembelian & Rencana</Text>
+                <Text style={styles.plansWidgetSub}>
+                  {pinnedPlans.length > 0
+                    ? `${pinnedPlans.length} Target Dipin • Progres Saldo Kas`
+                    : activePlans.length > 0
+                    ? `${activePlans.length} Target Aktif • Belum Dipin`
+                    : 'Pasang target barang impian Anda'}
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => router.push('/modal/plans')}
+              style={({ pressed }) => [styles.seeAllPlansBtn, pressed && { opacity: 0.8 }]}>
+              <Text style={styles.seeAllPlansText}>Kelola</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </Pressable>
+          </View>
+
+          {pinnedPlans.length > 0 ? (
+            <View style={styles.pinnedList}>
+              {pinnedPlans.map((plan) => (
+                <PlanItem
+                  key={plan.id}
+                  plan={plan}
+                  currentBalance={cashflowSummary.balance}
+                  compact={true}
+                  onPress={() => router.push('/modal/plans')}
+                />
+              ))}
+            </View>
+          ) : (
+            <Pressable
+              style={({ pressed }) => [styles.emptyPlanBox, pressed && { opacity: 0.8 }]}
+              onPress={() => router.push(activePlans.length > 0 ? '/modal/plans' : '/modal/add-plan')}>
+              <Ionicons
+                name={activePlans.length > 0 ? 'star-outline' : 'add-circle-outline'}
+                size={20}
+                color={colors.primary}
+              />
+              <Text style={styles.emptyPlanText}>
+                {activePlans.length > 0
+                  ? 'Buka daftar target & beri tanda ⭐ agar tampil di sini'
+                  : '+ Pasang Target Barang Impian Baru'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
 
         {/* Quick Snapshot Widgets */}
         <View style={styles.widgetsRow}>
@@ -396,5 +458,80 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+  },
+  plansWidget: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 2,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  plansWidgetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  plansWidgetLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  plansIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plansWidgetTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  plansWidgetSub: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  seeAllPlansBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: colors.primarySoft,
+  },
+  seeAllPlansText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  pinnedList: {
+    marginTop: 4,
+  },
+  emptyPlanBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    borderStyle: 'dashed',
+    marginTop: 4,
+  },
+  emptyPlanText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primaryDark,
   },
 });
