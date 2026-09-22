@@ -2,7 +2,7 @@
 
 > **Aplikasi Pencatatan Keuangan, Arus Kas (Cash Flow), Hutang-Piutang, dan Jurnal Investasi Berbasis Offline-First.**
 
-[![Version](https://img.shields.io/badge/version-1.2.0-teal.svg)](#)
+[![Version](https://img.shields.io/badge/version-1.3.0-teal.svg)](#)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2057-000020.svg?logo=expo)](#)
 [![React Native](https://img.shields.io/badge/React%20Native-0.86-61DAFB.svg?logo=react)](#)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(Local)-003B57.svg?logo=sqlite)](#)
@@ -24,6 +24,7 @@
    - [6. Jurnal Trading & Investasi (Opsional)](#6-jurnal-trading--investasi-opsional)
    - [7. Mengekspor Laporan Keuangan (Setoran ke Atasan / Excel)](#7-mengekspor-laporan-keuangan-setoran-ke-atasan--excel)
    - [8. Mengatur Target Pembelian & Rencana Impian (Plans)](#8-mengatur-target-pembelian--rencana-impian-plans)
+   - [9. Manajemen Multi-Dompet & Transfer Saldo (Wallets)](#9-manajemen-multi-dompet--transfer-saldo-wallets)
 5. [Struktur Direktori & Arsitektur (Untuk Developer)](#-struktur-direktori--arsitektur-untuk-developer)
 6. [Panduan Menjalankan Project (Developer Quick Start)](#-panduan-menjalankan-project-developer-quick-start)
 7. [Tanya Jawab (FAQ) & Kendala Teknis](#-tanya-jawab-faq--kendala-teknis)
@@ -54,6 +55,7 @@
 | **📈 Grafik & Analisis** | Visualisasi diagram donat pengeluaran per pos kategori dan grafik batang perbandingan arus kas berkala. |
 | **💹 Trading & Investasi** | Jurnal pencatatan aset (Saham, Kripto, Forex, Emas, Reksa Dana) dengan kalkulasi otomatis PnL (laba/rugi) dan Win Rate. |
 | **🎯 Target & Rencana Impian** | Wishlist barang yang ingin dibeli (e.g. Laptop, Kendaraan) dengan progres dana otomatis dari saldo kas kas berjalan serta fitur pin ke Beranda. |
+| **👛 Multi-Dompet & Rekening** | Pemisahan saldo kas (Tunai, Rekening Bank BCA/Mandiri/BRI, E-Wallet GoPay/OVO/Dana) dengan fitur transfer antar dompet bebas biaya/admin dan pelaporan terpisah. |
 | **📄 Ekspor Laporan Resmi** | Cetak laporan PDF resmi siap setor ke atasan (dengan kartu ringkasan, breakdown kategori, & kolom tanda tangan) atau spreadsheet Excel/CSV. |
 | **☁️ Backup & Restore** | Cadangkan seluruh database dalam format file `.json` ke Google Drive, WhatsApp, atau penyimpanan lokal untuk dipulihkan sewaktu-waktu. |
 | **🔔 Pengingat Otomatis** | Notifikasi harian pukul 20:00 malam untuk mencatat transaksi hari itu serta alarm peringatan jatuh tempo pinjaman. |
@@ -184,6 +186,16 @@ Untuk memotivasi dan memonitor kesiapan dana membeli barang impian (misal: Lapto
 
 ---
 
+### 9. Manajemen Multi-Dompet & Transfer Saldo (Wallets)
+Bila usaha atau pribadi memisahkan uang di berbagai tempat (misal: Uang Kas Toko/Tunai, Bank BCA, Bank Mandiri, GoPay/OVO):
+1. **Mengatur Dompet:** Buka Beranda pada bagian **Dompet & Rekening** (atau buka **Pengaturan** ➡️ **Kelola Dompet & Rekening**).
+2. **Tambah Dompet/Rekening:** Ketuk **+ Tambah**, pilih jenis (Tunai, Bank, E-Wallet, Lainnya), tentukan nama dan saldo awal jika ada.
+3. **Pencatatan Transaksi:** Saat mencatat Pemasukan atau Pengeluaran, pilih dompet/rekening tujuan pemotongan kas.
+4. **Transfer Antar Dompet:** Ketuk **Transfer Saldo**, pilih dompet asal, dompet tujuan, dan masukkan nominal. Saldo otomatis berpindah dan tercatat di riwayat mutasi tanpa mempengaruhi total arus kas laba-rugi.
+5. **Mode Sederhana (Opsional):** Jika hanya ingin pembukuan kas tunggal, fitur multi-dompet dapat dimatikan melalui saklar di menu **Pengaturan**.
+
+---
+
 ## 🧱 Struktur Direktori & Arsitektur (Untuk Developer)
 
 Aplikasi dibangun menggunakan **React Native** dengan framework **Expo Router**, arsitektur berlapis yang rapi dan mudah dirawat:
@@ -209,6 +221,9 @@ cashflower/
 │   │   │   ├── add-category.tsx    # Form Kategori Kustom
 │   │   │   ├── add-plan.tsx        # Form Tambah & Edit Target Pembelian
 │   │   │   ├── plans.tsx           # Layar Pengelolaan Penuh Target & Rencana
+│   │   │   ├── wallets.tsx         # Layar Pengelolaan Akun Dompet & Rekening
+│   │   │   ├── add-wallet.tsx      # Form Tambah & Edit Akun Dompet
+│   │   │   ├── transfer-funds.tsx  # Form Transfer Saldo Antar Dompet
 │   │   │   ├── budget.tsx          # Form Pengaturan Target Anggaran
 │   │   │   ├── export-report.tsx   # Form Ekspor Laporan Resmi (PDF & Excel)
 │   │   │   └── settings.tsx        # Halaman Pengaturan, Notifikasi & Backup
@@ -220,6 +235,7 @@ cashflower/
 │   │   ├── debt-item.tsx            # Komponen Kartu Hutang/Piutang
 │   │   ├── investment-item.tsx      # Komponen Kartu Investasi
 │   │   ├── plan-item.tsx            # Komponen Kartu Target Rencana & Progres
+│   │   ├── wallet-card.tsx          # Komponen Kartu Dompet & Rekening
 │   │   ├── transaction-item.tsx     # Komponen Baris Transaksi
 │   │   └── empty-state.tsx          # Tampilan saat data kosong
 │   ├── context/
