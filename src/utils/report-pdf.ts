@@ -61,19 +61,33 @@ export async function exportTransactionsToPdf(
   const transactionRowsHtml = transactions.length > 0
     ? transactions.map((t, idx) => {
         const isInc = t.type === 'income';
-        const typeBadge = isInc
-          ? '<span style="background: #ECFDF5; color: #047857; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Masuk</span>'
-          : '<span style="background: #FEF2F2; color: #B91C1C; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Keluar</span>';
-        const amountFormatted = isInc
+        const isTrf = t.type === 'transfer';
+        let typeBadge = '';
+        if (isTrf) {
+          typeBadge = '<span style="background: #EEF2FF; color: #4338CA; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Transfer</span>';
+        } else if (isInc) {
+          typeBadge = '<span style="background: #ECFDF5; color: #047857; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Masuk</span>';
+        } else {
+          typeBadge = '<span style="background: #FEF2F2; color: #B91C1C; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Keluar</span>';
+        }
+
+        const amountFormatted = isTrf
+          ? `<span style="color: #4338CA; font-weight: 700;">${formatCurrency(t.amount)}</span>`
+          : isInc
           ? `<span style="color: #047857; font-weight: 700;">+${formatCurrency(t.amount)}</span>`
           : `<span style="color: #B91C1C; font-weight: 700;">-${formatCurrency(t.amount)}</span>`;
+
+        const walletDisplay = isTrf
+          ? `${t.wallet_name || 'Dompet'} ➔ ${t.destination_wallet_name || 'Tujuan'}`
+          : (t.wallet_name || 'Dompet Utama');
 
         return `
           <tr style="border-bottom: 1px solid #E2E8F0;">
             <td style="text-align: center; color: #64748B; font-size: 12px;">${idx + 1}</td>
             <td style="white-space: nowrap; font-size: 12px; color: #334155;">${formatDateShort(t.date)}</td>
             <td style="text-align: center;">${typeBadge}</td>
-            <td style="font-size: 12px; color: #475569;">${t.category_name || '-'}</td>
+            <td style="font-size: 11px; color: #475569; font-weight: 600;">${walletDisplay}</td>
+            <td style="font-size: 12px; color: #475569;">${t.category_name || (isTrf ? 'Transfer' : '-')}</td>
             <td style="font-size: 13px; font-weight: 500; color: #0F172A;">
               ${t.title}
               ${t.notes ? `<div style="font-size: 11px; color: #64748B; margin-top: 2px;">Nota/Ket: ${t.notes}</div>` : ''}
@@ -82,7 +96,7 @@ export async function exportTransactionsToPdf(
           </tr>
         `;
       }).join('')
-    : '<tr><td colspan="6" style="text-align: center; color: #94A3B8; padding: 20px;">Belum ada catatan transaksi pada periode ini.</td></tr>';
+    : '<tr><td colspan="7" style="text-align: center; color: #94A3B8; padding: 20px;">Belum ada catatan transaksi pada periode ini.</td></tr>';
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -315,12 +329,13 @@ export async function exportTransactionsToPdf(
     <table>
       <thead>
         <tr>
-          <th style="width: 32px; text-align: center;">No</th>
-          <th style="width: 85px; text-align: left;">Tanggal</th>
-          <th style="width: 75px; text-align: center;">Jenis</th>
-          <th style="width: 110px; text-align: left;">Kategori</th>
+          <th style="width: 28px; text-align: center;">No</th>
+          <th style="width: 80px; text-align: left;">Tanggal</th>
+          <th style="width: 70px; text-align: center;">Jenis</th>
+          <th style="width: 95px; text-align: left;">Dompet/Akun</th>
+          <th style="width: 100px; text-align: left;">Kategori</th>
           <th style="text-align: left;">Keterangan & Catatan</th>
-          <th style="width: 110px; text-align: right;">Nominal</th>
+          <th style="width: 105px; text-align: right;">Nominal</th>
         </tr>
       </thead>
       <tbody>

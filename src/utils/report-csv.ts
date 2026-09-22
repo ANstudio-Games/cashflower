@@ -59,6 +59,7 @@ export async function exportTransactionsToCsv(
     escapeCsv('No'),
     escapeCsv('Tanggal'),
     escapeCsv('Jenis Transaksi'),
+    escapeCsv('Dompet / Akun'),
     escapeCsv('Kategori'),
     escapeCsv('Keterangan / Nama Barang'),
     escapeCsv('Nominal (Rp)'),
@@ -68,14 +69,19 @@ export async function exportTransactionsToCsv(
   // Table rows
   transactions.forEach((t, idx) => {
     const isIncome = t.type === 'income';
-    const typeLabel = isIncome ? 'Pemasukan' : 'Pengeluaran';
-    const amountStr = isIncome ? `+${t.amount}` : `-${t.amount}`;
+    const isTransfer = t.type === 'transfer';
+    const typeLabel = isTransfer ? 'Transfer' : isIncome ? 'Pemasukan' : 'Pengeluaran';
+    const walletLabel = isTransfer
+      ? `${t.wallet_name || 'Dompet'} ➔ ${t.destination_wallet_name || 'Tujuan'}`
+      : (t.wallet_name || 'Dompet Utama');
+    const amountStr = isTransfer ? `${t.amount}` : isIncome ? `+${t.amount}` : `-${t.amount}`;
 
     lines.push([
       escapeCsv(idx + 1),
       escapeCsv(t.date),
       escapeCsv(typeLabel),
-      escapeCsv(t.category_name || 'Lainnya'),
+      escapeCsv(walletLabel),
+      escapeCsv(t.category_name || (isTransfer ? 'Transfer' : 'Lainnya')),
       escapeCsv(t.title),
       escapeCsv(amountStr),
       escapeCsv(t.notes || ''),

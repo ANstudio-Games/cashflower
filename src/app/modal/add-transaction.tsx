@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { parseCurrencyInput } from '@/utils/format-currency';
+import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { TransactionType } from '@/types';
 
@@ -27,7 +27,7 @@ export default function AddTransactionModal() {
   const params = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!params.id;
 
-  const { categories, transactions, createTransaction, editTransaction } = useFinance();
+  const { categories, transactions, wallets, createTransaction, editTransaction, isMultiWalletEnabled } = useFinance();
 
   const [type, setType] = useState<TransactionType>('expense');
   const [rawAmount, setRawAmount] = useState<string>('');
@@ -35,6 +35,7 @@ export default function AddTransactionModal() {
   const [date, setDate] = useState<string>(getTodayISO());
   const [notes, setNotes] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [existingCreatedAt, setExistingCreatedAt] = useState<number>(Date.now());
 
   // If editing, pre-fill form
@@ -48,40 +49,56 @@ export default function AddTransactionModal() {
         setDate(existing.date || getTodayISO());
         setNotes(existing.notes || '');
         setSelectedCategory(existing.category_id || '');
+        setSelectedWallet(existing.wallet_id || '');
         setExistingCreatedAt(existing.created_at || Date.now());
       }
     }
   }, [params.id, transactions]);
+
+  // Set default wallet if none selected
+  useEffect(() => {
+    if (!selectedWallet && wallets.length > 0) {
+      const defaultW = wallets.find((w) => w.is_default === 1) || wallets[0];
+      setSelectedWallet(defaultW.id);
+    }
+  }, [wallets, selectedWallet]);
 
   // Filter categories by type
   const availableCategories = categories.filter((c) => c.type === type);
 
   // Set default category if none selected
   useEffect(() => {
-    if (availableCategories.length > 0 && (!selectedCategory || !availableCategories.find((c) => c.id === selectedCategory))) {
-      setSelectedCategory(availableCategories[0].id);
+    if (availableCategories.length > 0 && !isEditing) {
+      const currentExists = availableCategories.some((c) => c.id === selectedCategory);
+      if (!currentExists) {
+        setSelectedCategory(availableCategories[0].id);
+      }
     }
-  }, [type, availableCategories, selectedCategory]);
+  }, [type, availableCategories, selectedCategory, isEditing]);
 
   const handleAmountChange = (text: string) => {
-    const num = parseCurrencyInput(text);
-    setRawAmount(num > 0 ? num.toString() : '');
+    const clean = text.replace(/[^0-9]/g, '');
+    setRawAmount(clean);
   };
 
   const handleSubmit = async () => {
-    const amount = parseInt(rawAmount, 10);
-    if (!amount || amount <= 0) {
+    const amount = parseFloat(rawAmount);
+    if (isNaN(amount) || amount <= 0) {
       Alert.alert('Perhatian', 'Mohon masukkan nominal uang yang valid.');
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Perhatian', 'Mohon isi nama barang atau keterangan transaksi.');
+      Alert.alert('Perhatian', 'Mohon isi nama catatan atau barang belanjaan.');
       return;
     }
     if (!selectedCategory) {
       Alert.alert('Perhatian', 'Mohon pilih kategori transaksi.');
       return;
     }
+
+    const walletId = isMultiWalletEnabled
+      ? (selectedWallet || (wallets.length > 0 ? wallets[0].id : 'wallet_cash'))
+      : null;
 
     try {
       if (isEditing && params.id) {
@@ -91,6 +108,8 @@ export default function AddTransactionModal() {
           amount,
           type,
           category_id: selectedCategory,
+          wallet_id: walletId,
+          destination_wallet_id: null,
           date,
           notes: notes.trim() || null,
           created_at: existingCreatedAt,
@@ -101,6 +120,8 @@ export default function AddTransactionModal() {
           amount,
           type,
           category_id: selectedCategory,
+          wallet_id: walletId,
+          destination_wallet_id: null,
           date,
           notes: notes.trim() || null,
         });
@@ -129,6 +150,22 @@ export default function AddTransactionModal() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
+        {/* Transfer Banner */}
+        {isMultiWalletEnabled && (
+          <Pressable
+            style={styles.transferBanner}
+            onPress={() => {
+              router.replace('/modal/transfer-funds');
+            }}>
+            <View style={styles.transferBannerIcon}>
+              <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.transferBannerText}>
+              Mau pindah saldo antar rekening/dompet? Buka Transfer ➔
+            </Text>
+          </Pressable>
+        )}
+
         {/* Type Switcher */}
         <View style={styles.typeSwitcher}>
           <Pressable
@@ -174,6 +211,58 @@ export default function AddTransactionModal() {
             />
           </View>
         </View>
+
+        {/* Wallet Selection */}
+        {isMultiWalletEnabled && (
+          <View style={styles.inputSection}>
+            <View style={styles.categoryHeader}>
+              <Text style={styles.sectionTitle}>
+                {type === 'expense' ? 'Bayar Pakai Dompet' : 'Masuk ke Dompet'}
+              </Text>
+              <Pressable
+                onPress={() => router.push('/modal/wallets')}
+                hitSlop={8}
+                style={styles.addCategoryBtn}>
+                <Ionicons name="wallet-outline" size={15} color={colors.primary} />
+                <Text style={styles.addCategoryText}>Kelola Dompet</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.walletsSelectGrid}>
+              {wallets.map((w) => {
+                const isSelected = selectedWallet === w.id;
+                return (
+                  <Pressable
+                    key={w.id}
+                    style={[
+                      styles.walletSelectChip,
+                      isSelected && { backgroundColor: `${w.color}18`, borderColor: w.color },
+                    ]}
+                    onPress={() => setSelectedWallet(w.id)}>
+                    <Ionicons
+                      name={(w.icon || 'wallet-outline') as any}
+                      size={16}
+                      color={isSelected ? w.color : colors.textSecondary}
+                    />
+                    <View style={{ flexShrink: 1 }}>
+                      <Text
+                        style={[
+                          styles.walletSelectName,
+                          isSelected && { color: w.color, fontWeight: '700' },
+                        ]}
+                        numberOfLines={1}>
+                        {w.name}
+                      </Text>
+                      <Text style={styles.walletSelectBalance} numberOfLines={1}>
+                        {formatCurrency(w.balance || 0)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Title / Item Name */}
         <View style={styles.inputSection}>
@@ -478,5 +567,58 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  transferBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 14,
+    gap: 8,
+  },
+  transferBannerIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  transferBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+  walletsSelectGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  walletSelectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    maxWidth: '48%',
+  },
+  walletSelectName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  walletSelectBalance: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
   },
 });

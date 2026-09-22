@@ -11,6 +11,7 @@ import {
   CashflowSummary,
   DebtSummary,
   InvestmentSummary,
+  Wallet,
 } from '@/types';
 import {
   getCategories,
@@ -38,6 +39,13 @@ import {
   togglePlanPinned,
   completePlan,
   deletePlan,
+  getWallets,
+  addWallet,
+  updateWallet,
+  deleteWallet,
+  transferWalletFunds,
+  getSetting,
+  setSetting,
 } from '@/db';
 import { backupToGoogleDriveOrShare, restoreFromBackupFile } from '@/utils/backup';
 import { scheduleDailyReminder, scheduleDebtReminder } from '@/utils/notifications';
@@ -46,6 +54,7 @@ interface FinanceContextType {
   isLoading: boolean;
   transactions: Transaction[];
   categories: Category[];
+  wallets: Wallet[];
   debts: Debt[];
   investments: Investment[];
   budgets: Budget[];
@@ -54,10 +63,14 @@ interface FinanceContextType {
   debtSummary: DebtSummary;
   investmentSummary: InvestmentSummary;
   refreshAll: () => Promise<void>;
-  createTransaction: (item: Omit<Transaction, 'id' | 'created_at' | 'category_name' | 'category_icon' | 'category_color'>) => Promise<void>;
-  editTransaction: (item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>) => Promise<void>;
+  createTransaction: (item: Omit<Transaction, 'id' | 'created_at' | 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>) => Promise<void>;
+  editTransaction: (item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>) => Promise<void>;
   deleteTransactionById: (id: string) => Promise<void>;
   createCategory: (cat: { name: string; type: 'income' | 'expense'; icon: string; color: string }) => Promise<void>;
+  createWallet: (wallet: Omit<Wallet, 'id' | 'created_at' | 'balance'>) => Promise<void>;
+  editWallet: (wallet: Omit<Wallet, 'balance'>) => Promise<void>;
+  deleteWalletById: (id: string) => Promise<void>;
+  transferBetweenWallets: (params: { sourceWalletId: string; destinationWalletId: string; amount: number; date: string; notes?: string | null }) => Promise<void>;
   createDebt: (debt: Omit<Debt, 'id' | 'created_at'>) => Promise<void>;
   toggleDebtStatus: (id: string, isPaid: boolean) => Promise<void>;
   deleteDebtById: (id: string) => Promise<void>;
@@ -70,6 +83,8 @@ interface FinanceContextType {
   togglePinPlan: (id: string, isPinned: boolean) => Promise<void>;
   fulfillPlan: (id: string, recordExpense: boolean) => Promise<void>;
   deletePlanById: (id: string) => Promise<void>;
+  isMultiWalletEnabled: boolean;
+  setMultiWalletEnabled: (enabled: boolean) => Promise<void>;
   backupData: () => Promise<boolean>;
   restoreData: () => Promise<number>;
 }
@@ -81,10 +96,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [plans, setPlans] = useState<FinancialPlan[]>([]);
+  const [isMultiWalletEnabled, setIsMultiWalletEnabled] = useState<boolean>(true);
 
   const [cashflowSummary, setCashflowSummary] = useState<CashflowSummary>({
     totalIncome: 0,
@@ -120,6 +137,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         fetchedInvSum,
         fetchedBudgets,
         fetchedPlans,
+        fetchedWallets,
+        walletSettingVal,
       ] = await Promise.all([
         getCategories(db),
         getTransactions(db),
@@ -130,6 +149,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         getInvestmentSummary(db),
         getBudgets(db),
         getPlans(db),
+        getWallets(db),
+        getSetting(db, 'is_multi_wallet_enabled', 'true'),
       ]);
 
       setCategories(fetchedCategories);
@@ -141,6 +162,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setInvestmentSummary(fetchedInvSum);
       setBudgets(fetchedBudgets);
       setPlans(fetchedPlans);
+      setWallets(fetchedWallets);
+      setIsMultiWalletEnabled(walletSettingVal === 'true');
     } catch (err) {
       console.error('Error refreshing finance data:', err);
     } finally {
@@ -163,11 +186,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createTransaction = async (
-    item: Omit<Transaction, 'id' | 'created_at' | 'category_name' | 'category_icon' | 'category_color'>
+    item: Omit<Transaction, 'id' | 'created_at' | 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>
   ) => {
     const newTx: Transaction = {
       ...item,
       id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      wallet_id: item.wallet_id || (wallets.length > 0 ? wallets[0].id : 'wallet_cash'),
       created_at: Date.now(),
     };
     await addTransaction(db, newTx);
@@ -176,7 +200,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const editTransaction = async (
-    item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>
+    item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>
   ) => {
     await updateTransaction(db, item);
     triggerHaptic();
@@ -185,6 +209,41 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const deleteTransactionById = async (id: string) => {
     await deleteTransaction(db, id);
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const createWallet = async (wallet: Omit<Wallet, 'id' | 'created_at' | 'balance'>) => {
+    const newWallet: Omit<Wallet, 'balance'> = {
+      ...wallet,
+      id: 'wallet_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      created_at: Date.now(),
+    };
+    await addWallet(db, newWallet);
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const editWallet = async (wallet: Omit<Wallet, 'balance'>) => {
+    await updateWallet(db, wallet);
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const deleteWalletById = async (id: string) => {
+    await deleteWallet(db, id);
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const transferBetweenWallets = async (params: {
+    sourceWalletId: string;
+    destinationWalletId: string;
+    amount: number;
+    date: string;
+    notes?: string | null;
+  }) => {
+    await transferWalletFunds(db, params);
     triggerHaptic();
     await refreshAll();
   };
@@ -312,12 +371,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       if (recordExpense) {
         const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const today = new Date().toISOString().split('T')[0];
+        const defaultWalletId = wallets.length > 0 ? wallets[0].id : 'wallet_cash';
         await addTransaction(db, {
           id: txId,
           title: `Beli: ${plan.title}`,
           amount: plan.target_amount,
           type: 'expense',
           category_id: plan.category_id || 'cat_shopping',
+          wallet_id: defaultWalletId,
+          destination_wallet_id: null,
           date: today,
           notes: plan.notes ? `Target impian tercapai. ${plan.notes}` : 'Target impian tercapai.',
           created_at: Date.now(),
@@ -356,12 +418,25 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return count;
   };
 
+  const setMultiWalletEnabled = async (enabled: boolean) => {
+    try {
+      setIsMultiWalletEnabled(enabled);
+      await setSetting(db, 'is_multi_wallet_enabled', enabled ? 'true' : 'false');
+      triggerHaptic();
+      await refreshAll();
+    } catch (err) {
+      console.error('Error setting multi wallet preference:', err);
+      throw err;
+    }
+  };
+
   return (
     <FinanceContext.Provider
       value={{
         isLoading,
         transactions,
         categories,
+        wallets,
         debts,
         investments,
         budgets,
@@ -374,6 +449,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         editTransaction,
         deleteTransactionById,
         createCategory,
+        createWallet,
+        editWallet,
+        deleteWalletById,
+        transferBetweenWallets,
         createDebt,
         toggleDebtStatus,
         deleteDebtById,
@@ -386,6 +465,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         togglePinPlan,
         fulfillPlan,
         deletePlanById,
+        isMultiWalletEnabled,
+        setMultiWalletEnabled,
         backupData,
         restoreData,
       }}>

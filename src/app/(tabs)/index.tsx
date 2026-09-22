@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { BalanceCard } from '@/components/balance-card';
+import { WalletCard } from '@/components/wallet-card';
 import { TransactionItem } from '@/components/transaction-item';
 import { PlanItem } from '@/components/plan-item';
 import { EmptyState } from '@/components/empty-state';
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const {
     transactions,
+    wallets,
     cashflowSummary,
     debtSummary,
     investmentSummary,
@@ -29,6 +31,7 @@ export default function HomeScreen() {
     plans,
     deleteTransactionById,
     refreshAll,
+    isMultiWalletEnabled,
   } = useFinance();
 
   const [refreshing, setRefreshing] = React.useState(false);
@@ -53,6 +56,10 @@ export default function HomeScreen() {
   let budgetColor = colors.income;
   if (budgetPct >= 70 && !isOver) budgetColor = colors.warning;
   if (isOver) budgetColor = colors.expense;
+
+  const displayedBalance = isMultiWalletEnabled
+    ? (cashflowSummary.totalWalletBalance ?? cashflowSummary.balance)
+    : cashflowSummary.balance;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -87,11 +94,70 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         {/* Main Cash Balance Card */}
         <BalanceCard
-          balance={cashflowSummary.balance}
+          balance={displayedBalance}
           totalIncome={cashflowSummary.totalIncome}
           totalExpense={cashflowSummary.totalExpense}
           onAddPress={() => router.push('/modal/add-transaction')}
         />
+
+        {/* Wallets / Multi-Account Carousel Section */}
+        {isMultiWalletEnabled && (
+          <View style={styles.walletsSection}>
+          <View style={styles.walletsSectionHeader}>
+            <View style={styles.walletsSectionTitleWrap}>
+              <View style={[styles.walletsHeaderIcon, { backgroundColor: colors.primarySoft }]}>
+                <Ionicons name="wallet" size={16} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.walletsSectionTitle}>Dompet & Rekening</Text>
+                <Text style={styles.walletsSectionSub}>
+                  {wallets.length} Tempat Simpan Uang
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.walletsHeaderActions}>
+              <Pressable
+                style={({ pressed }) => [styles.transferQuickBtn, pressed && { opacity: 0.8 }]}
+                onPress={() => router.push('/modal/transfer-funds')}>
+                <Ionicons name="swap-horizontal" size={13} color={colors.primaryDark} />
+                <Text style={styles.transferQuickBtnText}>Transfer</Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [styles.seeAllWalletsBtn, pressed && { opacity: 0.8 }]}
+                onPress={() => router.push('/modal/wallets')}>
+                <Text style={styles.seeAllWalletsText}>Kelola</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              </Pressable>
+            </View>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.walletsScrollContent}>
+            {wallets.map((w) => (
+              <WalletCard
+                key={w.id}
+                wallet={w}
+                compact={true}
+                onPress={() => router.push('/modal/wallets')}
+              />
+            ))}
+
+            {/* Add Wallet Card */}
+            <Pressable
+              style={({ pressed }) => [styles.addWalletCard, pressed && { opacity: 0.8 }]}
+              onPress={() => router.push('/modal/add-wallet')}>
+              <View style={styles.addWalletCircle}>
+                <Ionicons name="add" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.addWalletText}>+ Dompet</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+        )}
 
         {/* Budgeting Widget Card */}
         <Pressable
@@ -258,6 +324,7 @@ export default function HomeScreen() {
               <TransactionItem
                 key={tx.id}
                 item={tx}
+                showWalletBadge={isMultiWalletEnabled}
                 onEdit={() => router.push({ pathname: '/modal/add-transaction', params: { id: tx.id } })}
                 onDelete={(id) => deleteTransactionById(id)}
               />
@@ -533,5 +600,101 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.primaryDark,
+  },
+  walletsSection: {
+    marginVertical: 4,
+    marginBottom: 10,
+  },
+  walletsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    marginBottom: 8,
+  },
+  walletsSectionTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  walletsHeaderIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletsSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  walletsSectionSub: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  walletsHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  transferQuickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  transferQuickBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  seeAllWalletsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+  },
+  seeAllWalletsText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  walletsScrollContent: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  addWalletCard: {
+    width: 110,
+    minHeight: 110,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    gap: 8,
+  },
+  addWalletCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addWalletText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });
