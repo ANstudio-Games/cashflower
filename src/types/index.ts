@@ -1,9 +1,25 @@
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
+
+export type WalletType = 'cash' | 'bank' | 'ewallet' | 'savings' | 'other';
+
+export interface Wallet {
+  id: string;
+  name: string;             // e.g. "Dompet Tunai", "BCA", "GoPay"
+  type: WalletType;
+  initial_balance: number;  // Saldo awal saat dompet dibuat
+  balance?: number;         // Saldo saat ini (computed dari transaksi)
+  icon: string;             // Ionicons glyph name
+  color: string;            // Hex color code
+  is_default: number;       // 1 = dompet utama / default
+  created_at: number;
+}
+
+export type CategoryType = 'income' | 'expense';
 
 export interface Category {
   id: string;
   name: string;
-  type: TransactionType;
+  type: CategoryType;
   icon: string; // Ionicons glyph name
   color: string;
   is_default: number;
@@ -15,12 +31,18 @@ export interface Transaction {
   amount: number;      // Nominal Rp
   type: TransactionType;
   category_id: string;
+  wallet_id?: string | null;             // Dompet sumber transaksi
+  destination_wallet_id?: string | null; // Dompet tujuan jika transfer
   date: string;        // YYYY-MM-DD
   notes?: string | null;
   created_at: number;
   category_name?: string;
   category_icon?: string;
   category_color?: string;
+  wallet_name?: string;
+  wallet_icon?: string;
+  wallet_color?: string;
+  destination_wallet_name?: string;
 }
 
 export type DebtType = 'receivable' | 'payable'; 
@@ -71,6 +93,7 @@ export interface CashflowSummary {
   totalExpense: number;
   balance: number;
   transactionCount: number;
+  totalWalletBalance?: number;
 }
 
 export interface DebtSummary {
@@ -113,4 +136,8 @@ export interface BackupData {
   investments: Investment[];
   budgets: Budget[];
   plans?: FinancialPlan[];
+  wallets?: Wallet[];
+  settings?: {
+    isMultiWalletEnabled?: boolean;
+  };
 }

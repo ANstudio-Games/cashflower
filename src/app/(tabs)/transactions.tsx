@@ -18,11 +18,12 @@ import { colors } from '@/theme/colors';
 
 export default function TransactionsScreen() {
   const router = useRouter();
-  const { transactions, categories, deleteTransactionById } = useFinance();
+  const { transactions, categories, wallets, deleteTransactionById, isMultiWalletEnabled } = useFinance();
 
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [walletFilter, setWalletFilter] = useState<string>('all');
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
@@ -41,9 +42,15 @@ export default function TransactionsScreen() {
       if (categoryFilter !== 'all' && tx?.category_id !== categoryFilter) {
         return false;
       }
+      // Wallet filter (only when multi-wallet is enabled)
+      if (isMultiWalletEnabled && walletFilter !== 'all') {
+        const matchSource = tx?.wallet_id === walletFilter;
+        const matchDest = tx?.destination_wallet_id === walletFilter;
+        if (!matchSource && !matchDest) return false;
+      }
       return true;
     });
-  }, [transactions, search, typeFilter, categoryFilter]);
+  }, [transactions, search, typeFilter, categoryFilter, walletFilter, isMultiWalletEnabled]);
 
   const handleEdit = (id: string) => {
     router.push({
@@ -63,6 +70,11 @@ export default function TransactionsScreen() {
           </Text>
         </View>
         <View style={styles.headerRightActions}>
+          <Pressable
+            style={({ pressed }) => [styles.transferBtn, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/modal/transfer-funds')}>
+            <Ionicons name="swap-horizontal" size={18} color={colors.primaryDark} />
+          </Pressable>
           <Pressable
             style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.8 }]}
             onPress={() => router.push('/modal/export-report')}>
@@ -132,7 +144,72 @@ export default function TransactionsScreen() {
             Pemasukan
           </Text>
         </Pressable>
+        {isMultiWalletEnabled && (
+          <Pressable
+            style={[styles.typeTab, typeFilter === 'transfer' && styles.typeTabActiveTransfer]}
+            onPress={() => setTypeFilter('transfer')}>
+            <Ionicons
+              name="swap-horizontal"
+              size={13}
+              color={typeFilter === 'transfer' ? '#4338CA' : colors.textSecondary}
+            />
+            <Text
+              style={[styles.typeTabText, typeFilter === 'transfer' && styles.typeTabTextActiveTransfer]}
+              numberOfLines={1}>
+              Transfer
+            </Text>
+          </Pressable>
+        )}
       </View>
+
+      {/* Horizontal Wallet Filter Chips */}
+      {isMultiWalletEnabled && (
+        <View style={styles.walletScrollContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryScroll}>
+            <Pressable
+              style={[styles.catChip, walletFilter === 'all' && styles.catChipActive]}
+              onPress={() => setWalletFilter('all')}>
+              <Ionicons
+                name="wallet-outline"
+                size={14}
+                color={walletFilter === 'all' ? colors.primaryDark : colors.textSecondary}
+              />
+              <Text style={[styles.catChipText, walletFilter === 'all' && styles.catChipTextActive]}>
+                Semua Dompet
+              </Text>
+            </Pressable>
+
+            {wallets.map((w) => {
+              const isSelected = walletFilter === w.id;
+              return (
+                <Pressable
+                  key={w.id}
+                  style={[
+                    styles.catChip,
+                    isSelected && { backgroundColor: `${w.color}20`, borderColor: w.color },
+                  ]}
+                  onPress={() => setWalletFilter(w.id)}>
+                  <Ionicons
+                    name={(w.icon || 'wallet-outline') as any}
+                    size={14}
+                    color={isSelected ? w.color : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.catChipText,
+                      isSelected && { color: w.color, fontWeight: '700' },
+                    ]}>
+                    {w.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Horizontal Category Chips Container with Guaranteed Visibility */}
       <View style={styles.categoryScrollContainer}>
@@ -183,6 +260,7 @@ export default function TransactionsScreen() {
         renderItem={({ item }) => (
           <TransactionItem
             item={item}
+            showWalletBadge={isMultiWalletEnabled}
             onEdit={() => handleEdit(item.id)}
             onDelete={(id) => deleteTransactionById(id)}
           />
@@ -244,6 +322,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  transferBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   addBtn: {
     width: 40,
     height: 40,
@@ -302,6 +390,9 @@ const styles = StyleSheet.create({
   typeTabActiveIncome: {
     backgroundColor: colors.incomeSoft,
   },
+  typeTabActiveTransfer: {
+    backgroundColor: '#EEF2FF',
+  },
   typeTabText: {
     fontSize: 12,
     fontWeight: '600',
@@ -319,9 +410,18 @@ const styles = StyleSheet.create({
     color: colors.incomeDark,
     fontWeight: '700',
   },
+  typeTabTextActiveTransfer: {
+    color: '#4338CA',
+    fontWeight: '700',
+  },
+  walletScrollContainer: {
+    height: 44,
+    marginTop: 2,
+    marginBottom: 4,
+  },
   categoryScrollContainer: {
     height: 46,
-    marginTop: 4,
+    marginTop: 2,
     marginBottom: 6,
   },
   categoryScroll: {

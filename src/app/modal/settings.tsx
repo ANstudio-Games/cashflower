@@ -21,7 +21,17 @@ export default function SettingsModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
-  const { backupData, restoreData, transactions, debts, investments, plans } = useFinance();
+  const {
+    backupData,
+    restoreData,
+    transactions,
+    debts,
+    investments,
+    plans,
+    wallets,
+    isMultiWalletEnabled,
+    setMultiWalletEnabled,
+  } = useFinance();
 
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
   const [debtReminderEnabled, setDebtReminderEnabled] = useState(true);
@@ -212,9 +222,88 @@ export default function SettingsModal() {
           </View>
         </View>
 
+        {/* Section: Dompet & Akun Keuangan */}
+        <Text style={styles.sectionHeader}>DOMPET & TEMPAT SIMPAN UANG</Text>
+        <View style={styles.cardGroup}>
+          <View style={styles.actionRow}>
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: isMultiWalletEnabled ? colors.primarySoft : colors.borderLight },
+              ]}>
+              <Ionicons
+                name="wallet-outline"
+                size={20}
+                color={isMultiWalletEnabled ? colors.primary : colors.textMuted}
+              />
+            </View>
+            <View style={styles.actionInfo}>
+              <Text style={styles.actionTitle}>Fitur Multi-Dompet</Text>
+              <Text style={styles.actionDesc}>
+                {isMultiWalletEnabled
+                  ? 'Aktif: Pisahkan saldo ke tunai, bank, & e-wallet'
+                  : 'Nonaktif: Menggunakan 1 saldo utama (klasik)'}
+              </Text>
+            </View>
+            <Switch
+              value={isMultiWalletEnabled}
+              onValueChange={async (val) => {
+                await setMultiWalletEnabled(val);
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          {isMultiWalletEnabled && (
+            <>
+              <View style={styles.rowDivider} />
+
+              <Pressable
+                style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}
+                onPress={() => router.push('/modal/wallets')}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primarySoft }]}>
+                  <Ionicons name="options-outline" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.actionInfo}>
+                  <Text style={styles.actionTitle}>Kelola Dompet & Rekening</Text>
+                  <Text style={styles.actionDesc}>
+                    Atur uang tunai, bank, dan e-wallet ({wallets.length} dompet aktif)
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+
+              <View style={styles.rowDivider} />
+
+              <Pressable
+                style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}
+                onPress={() => router.push('/modal/transfer-funds')}>
+                <View style={[styles.iconWrap, { backgroundColor: '#EEF2FF' }]}>
+                  <Ionicons name="swap-horizontal-outline" size={20} color="#6366F1" />
+                </View>
+                <View style={styles.actionInfo}>
+                  <Text style={styles.actionTitle}>Transfer Antar Dompet</Text>
+                  <Text style={styles.actionDesc}>Pindahkan saldo antar rekening, tunai, atau e-wallet</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+            </>
+          )}
+        </View>
+
         {/* Section: Ringkasan Database Lokal */}
         <Text style={styles.sectionHeader}>STATUS PENYIMPANAN LOKAL</Text>
         <View style={styles.cardGroup}>
+          {isMultiWalletEnabled && (
+            <>
+              <View style={styles.statsRow}>
+                <Text style={styles.statsLabel}>Total Dompet & Rekening</Text>
+                <Text style={styles.statsVal}>{wallets.length} tempat</Text>
+              </View>
+              <View style={styles.rowDivider} />
+            </>
+          )}
           <View style={styles.statsRow}>
             <Text style={styles.statsLabel}>Total Transaksi</Text>
             <Text style={styles.statsVal}>{transactions.length} data</Text>

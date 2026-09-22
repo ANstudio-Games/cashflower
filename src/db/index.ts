@@ -10,9 +10,16 @@ import {
   CashflowSummary,
   DebtSummary,
   InvestmentSummary,
+  Wallet,
 } from '@/types';
 
 export const DB_NAME = 'cashflower.db';
+
+export const DEFAULT_WALLETS: Omit<Wallet, 'created_at' | 'balance'>[] = [
+  { id: 'wallet_cash', name: 'Uang Tunai', type: 'cash', initial_balance: 0, icon: 'cash-outline', color: '#10B981', is_default: 1 },
+  { id: 'wallet_bank', name: 'Rekening Bank', type: 'bank', initial_balance: 0, icon: 'card-outline', color: '#3B82F6', is_default: 0 },
+  { id: 'wallet_ewallet', name: 'E-Wallet', type: 'ewallet', initial_balance: 0, icon: 'phone-portrait-outline', color: '#8B5CF6', is_default: 0 },
+];
 
 export const DEFAULT_CATEGORIES: Omit<Category, 'is_default'>[] = [
   // Pengeluaran
@@ -32,12 +39,25 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'is_default'>[] = [
   { id: 'cat_bonus', name: 'Bonus & Hadiah', type: 'income', icon: 'gift-outline', color: '#EC4899' },
   { id: 'cat_passive', name: 'Pendapatan Pasif', type: 'income', icon: 'trending-up-outline', color: '#8B5CF6' },
   { id: 'cat_other_inc', name: 'Pemasukan Lain', type: 'income', icon: 'wallet-outline', color: '#059669' },
+  // Transfer
+  { id: 'cat_transfer', name: 'Transfer Antar Dompet', type: 'expense', icon: 'swap-horizontal-outline', color: '#6366F1' },
 ];
 
 export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   // Create tables
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
+
+    CREATE TABLE IF NOT EXISTS wallets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      initial_balance REAL NOT NULL DEFAULT 0,
+      icon TEXT NOT NULL,
+      color TEXT NOT NULL,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
 
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
@@ -54,6 +74,8 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       amount REAL NOT NULL,
       type TEXT NOT NULL,
       category_id TEXT NOT NULL,
+      wallet_id TEXT,
+      destination_wallet_id TEXT,
       date TEXT NOT NULL,
       notes TEXT,
       created_at INTEGER NOT NULL,
@@ -106,7 +128,42 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       created_at INTEGER NOT NULL,
       FOREIGN KEY (category_id) REFERENCES categories (id)
     );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
+
+  // Migration for existing transactions table to ensure wallet_id and destination_wallet_id exist
+  try {
+    const txTableInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(transactions);');
+    const hasWalletId = txTableInfo.some((col) => col.name === 'wallet_id');
+    if (!hasWalletId) {
+      await db.execAsync('ALTER TABLE transactions ADD COLUMN wallet_id TEXT;');
+    }
+    const hasDestWalletId = txTableInfo.some((col) => col.name === 'destination_wallet_id');
+    if (!hasDestWalletId) {
+      await db.execAsync('ALTER TABLE transactions ADD COLUMN destination_wallet_id TEXT;');
+    }
+  } catch (migErr) {
+    console.warn('Migration check warning:', migErr);
+  }
+
+  // Insert default wallets if not already populated
+  const existingWallets = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM wallets');
+  if (!existingWallets || existingWallets.count === 0) {
+    const now = Date.now();
+    for (const w of DEFAULT_WALLETS) {
+      await db.runAsync(
+        'INSERT OR IGNORE INTO wallets (id, name, type, initial_balance, icon, color, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [w.id, w.name, w.type, w.initial_balance, w.icon, w.color, w.is_default, now]
+      );
+    }
+  }
+
+  // Link any orphaned transactions without wallet_id to default wallet
+  await db.runAsync("UPDATE transactions SET wallet_id = 'wallet_cash' WHERE wallet_id IS NULL");
 
   // Insert default categories if not already populated
   const existingCat = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories');
@@ -117,6 +174,11 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
         [cat.id, cat.name, cat.type, cat.icon, cat.color]
       );
     }
+  } else {
+    // Ensure transfer category exists even if categories already seeded
+    await db.runAsync(
+      "INSERT OR IGNORE INTO categories (id, name, type, icon, color, is_default) VALUES ('cat_transfer', 'Transfer Antar Dompet', 'expense', 'swap-horizontal-outline', '#6366F1', 1)"
+    );
   }
 }
 
@@ -139,13 +201,114 @@ export async function addCategory(
   );
 }
 
+// ------------------- Wallet Operations -------------------
+
+export async function getWallets(db: SQLite.SQLiteDatabase): Promise<Wallet[]> {
+  const query = `
+    SELECT 
+      w.*,
+      (
+        w.initial_balance 
+        + COALESCE((SELECT SUM(amount) FROM transactions WHERE wallet_id = w.id AND type = 'income'), 0)
+        - COALESCE((SELECT SUM(amount) FROM transactions WHERE wallet_id = w.id AND type = 'expense'), 0)
+        - COALESCE((SELECT SUM(amount) FROM transactions WHERE wallet_id = w.id AND type = 'transfer'), 0)
+        + COALESCE((SELECT SUM(amount) FROM transactions WHERE destination_wallet_id = w.id AND type = 'transfer'), 0)
+      ) as balance
+    FROM wallets w
+    ORDER BY w.is_default DESC, w.created_at ASC
+  `;
+  return await db.getAllAsync<Wallet>(query);
+}
+
+export async function getWalletById(db: SQLite.SQLiteDatabase, id: string): Promise<Wallet | null> {
+  const query = `
+    SELECT 
+      w.*,
+      (
+        w.initial_balance 
+        + COALESCE((SELECT SUM(amount) FROM transactions WHERE wallet_id = w.id AND type = 'income'), 0)
+        - COALESCE((SELECT SUM(amount) FROM transactions WHERE wallet_id = w.id AND type = 'expense'), 0)
+        - COALESCE((SELECT SUM(amount) FROM transactions WHERE wallet_id = w.id AND type = 'transfer'), 0)
+        + COALESCE((SELECT SUM(amount) FROM transactions WHERE destination_wallet_id = w.id AND type = 'transfer'), 0)
+      ) as balance
+    FROM wallets w
+    WHERE w.id = ?
+  `;
+  return await db.getFirstAsync<Wallet>(query, [id]);
+}
+
+export async function addWallet(
+  db: SQLite.SQLiteDatabase,
+  wallet: Omit<Wallet, 'balance'>
+): Promise<void> {
+  if (wallet.is_default === 1) {
+    await db.runAsync('UPDATE wallets SET is_default = 0 WHERE is_default = 1');
+  }
+  await db.runAsync(
+    'INSERT INTO wallets (id, name, type, initial_balance, icon, color, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [wallet.id, wallet.name, wallet.type, wallet.initial_balance, wallet.icon, wallet.color, wallet.is_default, wallet.created_at]
+  );
+}
+
+export async function updateWallet(
+  db: SQLite.SQLiteDatabase,
+  wallet: Omit<Wallet, 'balance'>
+): Promise<void> {
+  if (wallet.is_default === 1) {
+    await db.runAsync('UPDATE wallets SET is_default = 0 WHERE id != ?', [wallet.id]);
+  }
+  await db.runAsync(
+    'UPDATE wallets SET name = ?, type = ?, initial_balance = ?, icon = ?, color = ?, is_default = ? WHERE id = ?',
+    [wallet.name, wallet.type, wallet.initial_balance, wallet.icon, wallet.color, wallet.is_default, wallet.id]
+  );
+}
+
+export async function deleteWallet(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
+  // Reassign transactions referencing this wallet to default or fallback wallet
+  const fallback = await db.getFirstAsync<Wallet>(
+    'SELECT * FROM wallets WHERE id != ? ORDER BY is_default DESC, created_at ASC LIMIT 1',
+    [id]
+  );
+  if (fallback) {
+    await db.runAsync('UPDATE transactions SET wallet_id = ? WHERE wallet_id = ?', [fallback.id, id]);
+    await db.runAsync('UPDATE transactions SET destination_wallet_id = ? WHERE destination_wallet_id = ?', [fallback.id, id]);
+  }
+  await db.runAsync('DELETE FROM wallets WHERE id = ?', [id]);
+}
+
+export async function transferWalletFunds(
+  db: SQLite.SQLiteDatabase,
+  params: {
+    sourceWalletId: string;
+    destinationWalletId: string;
+    amount: number;
+    date: string;
+    notes?: string | null;
+  }
+): Promise<void> {
+  const source = await db.getFirstAsync<Wallet>('SELECT * FROM wallets WHERE id = ?', [params.sourceWalletId]);
+  const dest = await db.getFirstAsync<Wallet>('SELECT * FROM wallets WHERE id = ?', [params.destinationWalletId]);
+
+  const sourceName = source ? source.name : 'Dompet Asal';
+  const destName = dest ? dest.name : 'Dompet Tujuan';
+  const title = `Transfer: ${sourceName} ➔ ${destName}`;
+  const txId = 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+  await db.runAsync(
+    `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, created_at)
+     VALUES (?, ?, ?, 'transfer', 'cat_transfer', ?, ?, ?, ?, ?)`,
+    [txId, title, params.amount, params.sourceWalletId, params.destinationWalletId, params.date, params.notes ?? null, Date.now()]
+  );
+}
+
 // ------------------- Transaction Operations -------------------
 
 export async function getTransactions(
   db: SQLite.SQLiteDatabase,
   options?: {
-    type?: 'income' | 'expense';
+    type?: 'income' | 'expense' | 'transfer';
     categoryId?: string;
+    walletId?: string;
     startDate?: string;
     endDate?: string;
     search?: string;
@@ -153,9 +316,19 @@ export async function getTransactions(
   }
 ): Promise<Transaction[]> {
   let query = `
-    SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
+    SELECT 
+      t.*, 
+      c.name as category_name, 
+      c.icon as category_icon, 
+      c.color as category_color,
+      w.name as wallet_name,
+      w.icon as wallet_icon,
+      w.color as wallet_color,
+      dw.name as destination_wallet_name
     FROM transactions t
     LEFT JOIN categories c ON t.category_id = c.id
+    LEFT JOIN wallets w ON t.wallet_id = w.id
+    LEFT JOIN wallets dw ON t.destination_wallet_id = dw.id
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -167,6 +340,10 @@ export async function getTransactions(
   if (options?.categoryId) {
     query += ' AND t.category_id = ?';
     params.push(options.categoryId);
+  }
+  if (options?.walletId && options.walletId !== 'all') {
+    query += ' AND (t.wallet_id = ? OR t.destination_wallet_id = ?)';
+    params.push(options.walletId, options.walletId);
   }
   if (options?.startDate) {
     query += ' AND t.date >= ?';
@@ -193,9 +370,19 @@ export async function getTransactions(
 
 export async function getTransactionById(db: SQLite.SQLiteDatabase, id: string): Promise<Transaction | null> {
   return await db.getFirstAsync<Transaction>(
-    `SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
+    `SELECT 
+       t.*, 
+       c.name as category_name, 
+       c.icon as category_icon, 
+       c.color as category_color,
+       w.name as wallet_name,
+       w.icon as wallet_icon,
+       w.color as wallet_color,
+       dw.name as destination_wallet_name
      FROM transactions t
      LEFT JOIN categories c ON t.category_id = c.id
+     LEFT JOIN wallets w ON t.wallet_id = w.id
+     LEFT JOIN wallets dw ON t.destination_wallet_id = dw.id
      WHERE t.id = ?`,
     [id]
   );
@@ -203,24 +390,45 @@ export async function getTransactionById(db: SQLite.SQLiteDatabase, id: string):
 
 export async function addTransaction(
   db: SQLite.SQLiteDatabase,
-  item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>
+  item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>
 ): Promise<void> {
   await db.runAsync(
-    `INSERT INTO transactions (id, title, amount, type, category_id, date, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [item.id, item.title, item.amount, item.type, item.category_id, item.date, item.notes ?? null, item.created_at]
+    `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      item.id,
+      item.title,
+      item.amount,
+      item.type,
+      item.category_id,
+      item.wallet_id ?? 'wallet_cash',
+      item.destination_wallet_id ?? null,
+      item.date,
+      item.notes ?? null,
+      item.created_at,
+    ]
   );
 }
 
 export async function updateTransaction(
   db: SQLite.SQLiteDatabase,
-  item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color'>
+  item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>
 ): Promise<void> {
   await db.runAsync(
     `UPDATE transactions 
-     SET title = ?, amount = ?, type = ?, category_id = ?, date = ?, notes = ?
+     SET title = ?, amount = ?, type = ?, category_id = ?, wallet_id = ?, destination_wallet_id = ?, date = ?, notes = ?
      WHERE id = ?`,
-    [item.title, item.amount, item.type, item.category_id, item.date, item.notes ?? null, item.id]
+    [
+      item.title,
+      item.amount,
+      item.type,
+      item.category_id,
+      item.wallet_id ?? 'wallet_cash',
+      item.destination_wallet_id ?? null,
+      item.date,
+      item.notes ?? null,
+      item.id,
+    ]
   );
 }
 
@@ -255,11 +463,17 @@ export async function getCashflowSummary(
   const row = await db.getFirstAsync<{ totalIncome: number; totalExpense: number; transactionCount: number }>(query, params);
   const totalIncome = row?.totalIncome || 0;
   const totalExpense = row?.totalExpense || 0;
+
+  // Calculate real total wallet balance across all wallets
+  const wallets = await getWallets(db);
+  const totalWalletBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+
   return {
     totalIncome,
     totalExpense,
     balance: totalIncome - totalExpense,
     transactionCount: row?.transactionCount || 0,
+    totalWalletBalance,
   };
 }
 
@@ -562,16 +776,47 @@ export async function deletePlan(db: SQLite.SQLiteDatabase, id: string): Promise
   await db.runAsync('DELETE FROM financial_plans WHERE id = ?', [id]);
 }
 
+// ------------------- App Settings Operations -------------------
+
+export async function getSetting(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+  defaultValue: string = ''
+): Promise<string> {
+  try {
+    const row = await db.getFirstAsync<{ value: string }>(
+      'SELECT value FROM app_settings WHERE key = ?',
+      [key]
+    );
+    return row ? row.value : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+export async function setSetting(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+  value: string
+): Promise<void> {
+  await db.runAsync(
+    'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    [key, value]
+  );
+}
+
 // ------------------- Backup & Restore Operations -------------------
 
 export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupData> {
-  const [categories, transactions, debts, investments, budgets, plans] = await Promise.all([
+  const [categories, transactions, debts, investments, budgets, plans, wallets, multiWalletVal] = await Promise.all([
     db.getAllAsync<Category>('SELECT * FROM categories'),
     db.getAllAsync<Transaction>('SELECT * FROM transactions'),
     db.getAllAsync<Debt>('SELECT * FROM debts'),
     db.getAllAsync<Investment>('SELECT * FROM investments'),
     db.getAllAsync<Budget>('SELECT * FROM budgets'),
     db.getAllAsync<FinancialPlan>('SELECT * FROM financial_plans'),
+    db.getAllAsync<Wallet>('SELECT * FROM wallets'),
+    getSetting(db, 'is_multi_wallet_enabled', 'true'),
   ]);
 
   return {
@@ -583,6 +828,10 @@ export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupDa
     investments,
     budgets,
     plans,
+    wallets,
+    settings: {
+      isMultiWalletEnabled: multiWalletVal === 'true',
+    },
   };
 }
 
@@ -595,7 +844,27 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
       DELETE FROM investments;
       DELETE FROM budgets;
       DELETE FROM financial_plans;
+      DELETE FROM wallets;
     `);
+
+    // Restore wallets
+    if (Array.isArray(backup.wallets)) {
+      for (const w of backup.wallets) {
+        await db.runAsync(
+          'INSERT OR REPLACE INTO wallets (id, name, type, initial_balance, icon, color, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [w.id, w.name, w.type, w.initial_balance || 0, w.icon, w.color, w.is_default ?? 0, w.created_at || Date.now()]
+        );
+      }
+    } else {
+      // Re-seed default wallets if backup doesn't have wallets
+      const now = Date.now();
+      for (const w of DEFAULT_WALLETS) {
+        await db.runAsync(
+          'INSERT OR IGNORE INTO wallets (id, name, type, initial_balance, icon, color, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [w.id, w.name, w.type, w.initial_balance, w.icon, w.color, w.is_default, now]
+        );
+      }
+    }
 
     // Restore categories
     if (Array.isArray(backup.categories)) {
@@ -611,9 +880,20 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
     if (Array.isArray(backup.transactions)) {
       for (const t of backup.transactions) {
         await db.runAsync(
-          `INSERT INTO transactions (id, title, amount, type, category_id, date, notes, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.title, t.amount, t.type, t.category_id, t.date, t.notes ?? null, t.created_at || Date.now()]
+          `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            t.id,
+            t.title,
+            t.amount,
+            t.type,
+            t.category_id,
+            t.wallet_id ?? 'wallet_cash',
+            t.destination_wallet_id ?? null,
+            t.date,
+            t.notes ?? null,
+            t.created_at || Date.now(),
+          ]
         );
       }
     }
@@ -670,6 +950,11 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
           ]
         );
       }
+    }
+
+    // Restore settings
+    if (backup.settings?.isMultiWalletEnabled !== undefined) {
+      await setSetting(db, 'is_multi_wallet_enabled', backup.settings.isMultiWalletEnabled ? 'true' : 'false');
     }
   });
 }

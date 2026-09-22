@@ -55,6 +55,18 @@ export default function RootLayout() {
               name="modal/add-plan"
               options={{ presentation: 'modal', headerShown: false }}
             />
+            <Stack.Screen
+              name="modal/wallets"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
+            <Stack.Screen
+              name="modal/add-wallet"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
+            <Stack.Screen
+              name="modal/transfer-funds"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
           </Stack>
         </FinanceProvider>
       </SQLiteProvider>

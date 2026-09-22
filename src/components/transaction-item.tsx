@@ -10,10 +10,17 @@ interface TransactionItemProps {
   item: Transaction;
   onEdit?: (item: Transaction) => void;
   onDelete?: (id: string) => void;
+  showWalletBadge?: boolean;
 }
 
-export function TransactionItem({ item, onEdit, onDelete }: TransactionItemProps) {
+export function TransactionItem({
+  item,
+  onEdit,
+  onDelete,
+  showWalletBadge = true,
+}: TransactionItemProps) {
   const isIncome = item.type === 'income';
+  const isTransfer = item.type === 'transfer';
 
   const handleDelete = () => {
     if (!onDelete) return;
@@ -27,14 +34,18 @@ export function TransactionItem({ item, onEdit, onDelete }: TransactionItemProps
     );
   };
 
-  const iconName = (item.category_icon || (isIncome ? 'wallet-outline' : 'cart-outline')) as any;
-  const categoryColor = item.category_color || (isIncome ? colors.income : colors.expense);
+  const iconName = isTransfer
+    ? 'swap-horizontal-outline'
+    : ((item.category_icon || (isIncome ? 'wallet-outline' : 'cart-outline')) as any);
+  const categoryColor = isTransfer
+    ? '#6366F1'
+    : (item.category_color || (isIncome ? colors.income : colors.expense));
 
   return (
     <Pressable
       style={({ pressed }) => [styles.container, pressed && onEdit && styles.containerPressed]}
       onPress={() => onEdit && onEdit(item)}>
-      {/* Category Icon */}
+      {/* Category / Transfer Icon */}
       <View style={[styles.iconCircle, { backgroundColor: `${categoryColor}18` }]}>
         <Ionicons name={iconName} size={20} color={categoryColor} />
       </View>
@@ -45,9 +56,40 @@ export function TransactionItem({ item, onEdit, onDelete }: TransactionItemProps
           {item.title}
         </Text>
         <View style={styles.metaRow}>
-          <Text style={styles.categoryName}>
-            {item.category_name || (isIncome ? 'Pemasukan' : 'Pengeluaran')}
-          </Text>
+          {isTransfer ? (
+            <View style={[styles.walletBadge, { backgroundColor: '#EEF2FF' }]}>
+              <Ionicons name="swap-horizontal" size={11} color="#6366F1" />
+              <Text style={[styles.walletBadgeText, { color: '#6366F1' }]}>
+                {item.wallet_name || 'Dompet'} ➔ {item.destination_wallet_name || 'Tujuan'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {showWalletBadge && item.wallet_name && (
+                <>
+                  <View style={[styles.walletBadge, { backgroundColor: `${item.wallet_color || colors.textMuted}14` }]}>
+                    <Ionicons
+                      name={(item.wallet_icon || 'wallet-outline') as any}
+                      size={11}
+                      color={item.wallet_color || colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.walletBadgeText,
+                        { color: item.wallet_color || colors.textSecondary },
+                      ]}
+                      numberOfLines={1}>
+                      {item.wallet_name}
+                    </Text>
+                  </View>
+                  <Text style={styles.dot}>•</Text>
+                </>
+              )}
+              <Text style={styles.categoryName}>
+                {item.category_name || (isIncome ? 'Pemasukan' : 'Pengeluaran')}
+              </Text>
+            </>
+          )}
           <Text style={styles.dot}>•</Text>
           <Text style={styles.date}>{getRelativeDateLabel(item.date)}</Text>
         </View>
@@ -60,12 +102,20 @@ export function TransactionItem({ item, onEdit, onDelete }: TransactionItemProps
 
       {/* Amount & Actions */}
       <View style={styles.rightSection}>
-        <Text style={[styles.amount, isIncome ? styles.incomeText : styles.expenseText]}>
-          {isIncome ? `+${formatCurrency(item.amount)}` : `-${formatCurrency(item.amount)}`}
+        <Text
+          style={[
+            styles.amount,
+            isTransfer ? styles.transferText : isIncome ? styles.incomeText : styles.expenseText,
+          ]}>
+          {isTransfer
+            ? formatCurrency(item.amount)
+            : isIncome
+            ? `+${formatCurrency(item.amount)}`
+            : `-${formatCurrency(item.amount)}`}
         </Text>
 
         <View style={styles.actionRow}>
-          {onEdit ? (
+          {onEdit && !isTransfer ? (
             <Pressable
               hitSlop={8}
               onPress={() => onEdit(item)}
@@ -157,6 +207,21 @@ const styles = StyleSheet.create({
   },
   expenseText: {
     color: colors.expenseDark,
+  },
+  transferText: {
+    color: '#6366F1',
+  },
+  walletBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  walletBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   actionRow: {
     flexDirection: 'row',
