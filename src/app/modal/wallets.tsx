@@ -133,7 +133,13 @@ export default function WalletsModal() {
           {wallets.map((wallet) => {
             const isNegative = (wallet.balance || 0) < 0;
             return (
-              <View key={wallet.id} style={[styles.walletItemCard, shadowStyles.sm]}>
+              <View
+                key={wallet.id}
+                style={[
+                  styles.walletItemCard,
+                  wallet.is_default === 1 && styles.walletItemCardDefault,
+                  shadowStyles.sm,
+                ]}>
                 {/* Top Info */}
                 <View style={styles.walletItemTop}>
                   <View style={[styles.walletIconCircle, { backgroundColor: `${wallet.color}18` }]}>
@@ -151,6 +157,7 @@ export default function WalletsModal() {
                       </Text>
                       {wallet.is_default === 1 && (
                         <View style={styles.defaultPill}>
+                          <Ionicons name="star" size={9} color="#D97706" />
                           <Text style={styles.defaultPillText}>Utama</Text>
                         </View>
                       )}
@@ -375,16 +382,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
+  walletItemCardDefault: {
+    borderColor: '#FDE68A',
+  },
   defaultPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
     borderRadius: 6,
   },
   defaultPillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#D97706',
+    color: '#B45309',
+    letterSpacing: 0.2,
   },
   walletItemType: {
     fontSize: 12,

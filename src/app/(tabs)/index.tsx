@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   addWalletCard: {
     width: 110,
-    minHeight: 110,
+    minHeight: 116,
     borderRadius: 16,
     backgroundColor: colors.surface,
     borderWidth: 1.5,

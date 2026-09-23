@@ -14,6 +14,7 @@ interface WalletCardProps {
 export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps) {
   const balance = wallet.balance ?? wallet.initial_balance ?? 0;
   const isNegative = balance < 0;
+  const isDefault = wallet.is_default === 1;
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -35,6 +36,7 @@ export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps
       style={({ pressed }) => [
         styles.card,
         compact ? styles.cardCompact : styles.cardFull,
+        isDefault && styles.cardDefault,
         shadowStyles.sm,
         pressed && styles.cardPressed,
       ]}
@@ -45,14 +47,19 @@ export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps
           <Ionicons name={(wallet.icon || 'wallet-outline') as any} size={18} color={wallet.color} />
         </View>
 
-        <View style={styles.tagGroup}>
-          {wallet.is_default === 1 && (
+        <View style={[styles.tagGroup, compact && styles.tagGroupCompact]}>
+          {isDefault && (
             <View style={styles.defaultBadge}>
+              <Ionicons name="star" size={9} color="#D97706" />
               <Text style={styles.defaultBadgeText}>Utama</Text>
             </View>
           )}
-          <View style={[styles.typeBadge, { backgroundColor: `${wallet.color}12` }]}>
-            <Text style={[styles.typeBadgeText, { color: wallet.color }]}>
+          <View
+            style={[
+              styles.typeBadge,
+              { backgroundColor: `${wallet.color}12`, borderColor: `${wallet.color}25` },
+            ]}>
+            <Text style={[styles.typeBadgeText, { color: wallet.color }]} numberOfLines={1}>
               {getTypeLabel(wallet.type)}
             </Text>
           </View>
@@ -78,18 +85,21 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: 14,
+    padding: 13,
     borderWidth: 1,
     borderColor: colors.border,
     justifyContent: 'space-between',
   },
   cardCompact: {
-    width: 156,
-    minHeight: 110,
+    width: 162,
+    minHeight: 116,
   },
   cardFull: {
     width: '100%',
     marginBottom: 10,
+  },
+  cardDefault: {
+    borderColor: '#FDE68A',
   },
   cardPressed: {
     opacity: 0.88,
@@ -98,8 +108,8 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    marginBottom: 10,
   },
   iconWrap: {
     width: 36,
@@ -111,26 +121,38 @@ const styles = StyleSheet.create({
   tagGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  tagGroupCompact: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
     gap: 4,
   },
   defaultBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
   },
   defaultBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#D97706',
+    color: '#B45309',
+    letterSpacing: 0.2,
   },
   typeBadge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
+    borderWidth: 1,
   },
   typeBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
@@ -142,7 +164,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   walletBalance: {
     fontSize: 16,
