@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SQLiteProvider } from 'expo-sqlite';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DB_NAME, initDatabase } from '@/db';
+import { I18nProvider } from '@/i18n';
 import { FinanceProvider } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
 
@@ -12,8 +13,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <SQLiteProvider databaseName={DB_NAME} onInit={initDatabase}>
-        <FinanceProvider>
-          <Stack
+        <I18nProvider>
+          <FinanceProvider>
+            <Stack
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: colors.background },
@@ -69,7 +71,8 @@ export default function RootLayout() {
             />
           </Stack>
         </FinanceProvider>
-      </SQLiteProvider>
+      </I18nProvider>
+    </SQLiteProvider>
     </SafeAreaProvider>
   );
 }

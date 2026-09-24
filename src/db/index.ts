@@ -165,6 +165,11 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   // Link any orphaned transactions without wallet_id to default wallet
   await db.runAsync("UPDATE transactions SET wallet_id = 'wallet_cash' WHERE wallet_id IS NULL");
 
+  // Default language is English for new installations.
+  await db.runAsync(
+    `INSERT OR IGNORE INTO app_settings (key, value) VALUES ('language', 'en')`
+  );
+
   // Insert default categories if not already populated
   const existingCat = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories');
   if (!existingCat || existingCat.count === 0) {
