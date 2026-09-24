@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
+import { useI18n } from '@/i18n';
 
 const AVAILABLE_ICONS = [
   'cart-outline',
@@ -53,6 +54,7 @@ export default function AddCategoryModal() {
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createCategory } = useFinance();
+  const { t } = useI18n();
 
   const [name, setName] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('expense');
@@ -61,7 +63,7 @@ export default function AddCategoryModal() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Perhatian', 'Mohon isi nama kategori.');
+      Alert.alert(t('common_attention'), t('cat_err_name'));
       return;
     }
 
@@ -75,7 +77,7 @@ export default function AddCategoryModal() {
       router.back();
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Gagal membuat kategori baru.');
+      Alert.alert(t('common_error'), t('cat_err_save'));
     }
   };
 
@@ -86,7 +88,7 @@ export default function AddCategoryModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Kategori Baru</Text>
+        <Text style={styles.headerTitle}>{t('cat_modal_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -97,14 +99,14 @@ export default function AddCategoryModal() {
             style={[styles.typeBtn, type === 'expense' && styles.typeBtnActive]}
             onPress={() => setType('expense')}>
             <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>
-              Pengeluaran
+              {t('common_expense')}
             </Text>
           </Pressable>
           <Pressable
             style={[styles.typeBtn, type === 'income' && styles.typeBtnActive]}
             onPress={() => setType('income')}>
             <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>
-              Pemasukan
+              {t('common_income')}
             </Text>
           </Pressable>
         </View>
@@ -114,15 +116,15 @@ export default function AddCategoryModal() {
           <View style={[styles.previewIconWrap, { backgroundColor: `${selectedColor}20` }]}>
             <Ionicons name={selectedIcon as any} size={28} color={selectedColor} />
           </View>
-          <Text style={styles.previewName}>{name ? name : 'Nama Kategori'}</Text>
+          <Text style={styles.previewName}>{name ? name : t('cat_preview_default')}</Text>
         </View>
 
         {/* Name Input */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Nama Kategori</Text>
+          <Text style={styles.sectionTitle}>{t('cat_input_name')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Misal: Langganan Netflix, Kopi, dsb"
+            placeholder={t('cat_input_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
@@ -132,7 +134,7 @@ export default function AddCategoryModal() {
 
         {/* Color Palette */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pilih Warna</Text>
+          <Text style={styles.sectionTitle}>{t('cat_choose_color')}</Text>
           <View style={styles.colorsGrid}>
             {AVAILABLE_COLORS.map((color) => {
               const isSelected = selectedColor === color;
@@ -150,7 +152,7 @@ export default function AddCategoryModal() {
 
         {/* Icon Grid */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pilih Ikon</Text>
+          <Text style={styles.sectionTitle}>{t('cat_choose_icon')}</Text>
           <View style={styles.iconsGrid}>
             {AVAILABLE_ICONS.map((icon) => {
               const isSelected = selectedIcon === icon;
@@ -177,7 +179,7 @@ export default function AddCategoryModal() {
         <Pressable
           style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}
           onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Simpan Kategori</Text>
+          <Text style={styles.saveBtnText}>{t('cat_save_btn')}</Text>
         </Pressable>
       </ScrollView>
     </View>

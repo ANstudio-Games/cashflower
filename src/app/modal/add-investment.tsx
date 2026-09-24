@@ -19,21 +19,23 @@ import { colors } from '@/theme/colors';
 import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { InvestmentInstrument } from '@/types';
-
-const INSTRUMENTS: { id: InvestmentInstrument; label: string; icon: any }[] = [
-  { id: 'saham', label: 'Saham', icon: 'business-outline' },
-  { id: 'kripto', label: 'Kripto', icon: 'logo-bitcoin' },
-  { id: 'forex', label: 'Forex', icon: 'swap-horizontal-outline' },
-  { id: 'emas', label: 'Emas', icon: 'sparkles-outline' },
-  { id: 'reksadana', label: 'Reksa Dana', icon: 'pie-chart-outline' },
-  { id: 'lainnya', label: 'Lainnya', icon: 'stats-chart-outline' },
-];
+import { useI18n } from '@/i18n';
 
 export default function AddInvestmentModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createInvestment } = useFinance();
+  const { t } = useI18n();
+
+  const instruments: { id: InvestmentInstrument; label: string; icon: any }[] = [
+    { id: 'saham', label: t('inst_saham'), icon: 'business-outline' },
+    { id: 'kripto', label: t('inst_kripto'), icon: 'logo-bitcoin' },
+    { id: 'forex', label: t('inst_forex'), icon: 'swap-horizontal-outline' },
+    { id: 'emas', label: t('inst_emas'), icon: 'sparkles-outline' },
+    { id: 'reksadana', label: t('inst_reksadana'), icon: 'pie-chart-outline' },
+    { id: 'lainnya', label: t('inst_lainnya'), icon: 'stats-chart-outline' },
+  ];
 
   const [instrument, setInstrument] = useState<InvestmentInstrument>('saham');
   const [assetName, setAssetName] = useState('');
@@ -50,11 +52,11 @@ export default function AddInvestmentModal() {
 
   const handleSave = async () => {
     if (!assetName.trim()) {
-      Alert.alert('Perhatian', 'Mohon isi nama aset (misal: BBCA, BTC, dsb).');
+      Alert.alert(t('common_attention'), t('inv_modal_err_asset'));
       return;
     }
     if (buyPrice <= 0) {
-      Alert.alert('Perhatian', 'Mohon masukkan modal beli yang valid.');
+      Alert.alert(t('common_attention'), t('inv_modal_err_buy'));
       return;
     }
 
@@ -70,7 +72,7 @@ export default function AddInvestmentModal() {
       router.back();
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Gagal menyimpan catatan investasi/trading.');
+      Alert.alert(t('common_error'), t('inv_modal_err_save'));
     }
   };
 
@@ -83,15 +85,15 @@ export default function AddInvestmentModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Catat Trading / Investasi</Text>
+        <Text style={styles.headerTitle}>{t('inv_modal_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Instrument Selector */}
-        <Text style={styles.sectionTitle}>Pilih Instrumen</Text>
+        <Text style={styles.sectionTitle}>{t('inv_modal_select_inst')}</Text>
         <View style={styles.instrumentsRow}>
-          {INSTRUMENTS.map((inst) => {
+          {instruments.map((inst) => {
             const isSelected = instrument === inst.id;
             return (
               <Pressable
@@ -113,10 +115,10 @@ export default function AddInvestmentModal() {
 
         {/* Asset Name */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Nama Aset / Pair</Text>
+          <Text style={styles.sectionTitle}>{t('inv_modal_asset_name')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Contoh: BBCA, BTC/USDT, EUR/USD, Antam"
+            placeholder={t('inv_modal_asset_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={assetName}
             onChangeText={setAssetName}
@@ -127,7 +129,7 @@ export default function AddInvestmentModal() {
         {/* Prices Row */}
         <View style={styles.pricesRow}>
           <View style={[styles.inputSection, { flex: 1 }]}>
-            <Text style={styles.sectionTitle}>Modal / Beli (Rp)</Text>
+            <Text style={styles.sectionTitle}>{t('inv_modal_buy_price')}</Text>
             <TextInput
               style={styles.textInput}
               keyboardType="number-pad"
@@ -142,7 +144,7 @@ export default function AddInvestmentModal() {
           </View>
 
           <View style={[styles.inputSection, { flex: 1 }]}>
-            <Text style={styles.sectionTitle}>Jual / Tutup (Rp)</Text>
+            <Text style={styles.sectionTitle}>{t('inv_modal_sell_price')}</Text>
             <TextInput
               style={styles.textInput}
               keyboardType="number-pad"
@@ -166,7 +168,7 @@ export default function AddInvestmentModal() {
             ]}>
             <View style={styles.pnlRow}>
               <View>
-                <Text style={styles.pnlLabel}>{isProfit ? 'PROFIT (UNTUNG)' : 'LOSS (RUGI)'}</Text>
+                <Text style={styles.pnlLabel}>{isProfit ? t('inv_modal_profit') : t('inv_modal_loss')}</Text>
                 <Text
                   style={[
                     styles.pnlValue,
@@ -192,7 +194,7 @@ export default function AddInvestmentModal() {
 
         {/* Trade Date */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Tanggal Transaksi (YYYY-MM-DD)</Text>
+          <Text style={styles.sectionTitle}>{t('inv_modal_trade_date')}</Text>
           <TextInput
             style={styles.textInput}
             value={tradeDate}
@@ -204,10 +206,10 @@ export default function AddInvestmentModal() {
 
         {/* Strategy Notes */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Catatan Strategi / Alasan Buy & Sell</Text>
+          <Text style={styles.sectionTitle}>{t('inv_modal_notes_label')}</Text>
           <TextInput
             style={[styles.textInput, styles.textArea]}
-            placeholder="Misal: Breakout resistance di timeframe 4H, take profit pas target tercapai..."
+            placeholder={t('inv_modal_notes_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={notes}
             onChangeText={setNotes}
@@ -221,7 +223,7 @@ export default function AddInvestmentModal() {
           style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.85 }]}
           onPress={handleSave}>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-          <Text style={styles.submitBtnText}>Simpan Catatan Trading</Text>
+          <Text style={styles.submitBtnText}>{t('inv_modal_save')}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
