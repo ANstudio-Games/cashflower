@@ -20,7 +20,13 @@ import { useI18n } from '@/i18n';
 export default function TransactionsScreen() {
   const router = useRouter();
   const { transactions, categories, wallets, deleteTransactionById, isMultiWalletEnabled } = useFinance();
-  const { t, getCategoryName } = useI18n();
+  const {
+    t,
+    getCategoryName,
+    getWalletName,
+    getTransactionTitle,
+    getTransactionNotes,
+  } = useI18n();
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
@@ -32,8 +38,8 @@ export default function TransactionsScreen() {
       // Search title or notes
       if (search.trim()) {
         const q = search.toLowerCase().trim();
-        const matchTitle = (tx?.title || '').toLowerCase().includes(q);
-        const matchNotes = tx?.notes ? tx.notes.toLowerCase().includes(q) : false;
+        const matchTitle = getTransactionTitle(tx).toLowerCase().includes(q);
+        const matchNotes = getTransactionNotes(tx).toLowerCase().includes(q);
         if (!matchTitle && !matchNotes) return false;
       }
       // Type filter
@@ -52,7 +58,16 @@ export default function TransactionsScreen() {
       }
       return true;
     });
-  }, [transactions, search, typeFilter, categoryFilter, walletFilter, isMultiWalletEnabled]);
+  }, [
+    transactions,
+    search,
+    typeFilter,
+    categoryFilter,
+    walletFilter,
+    isMultiWalletEnabled,
+    getTransactionTitle,
+    getTransactionNotes,
+  ]);
 
   const handleEdit = (id: string) => {
     router.push({
@@ -158,7 +173,7 @@ export default function TransactionsScreen() {
             <Text
               style={[styles.typeTabText, typeFilter === 'transfer' && styles.typeTabTextActiveTransfer]}
               numberOfLines={1}>
-              Transfer
+              {t('common_transfer')}
             </Text>
           </Pressable>
         )}
@@ -180,7 +195,7 @@ export default function TransactionsScreen() {
                 color={walletFilter === 'all' ? colors.primaryDark : colors.textSecondary}
               />
               <Text style={[styles.catChipText, walletFilter === 'all' && styles.catChipTextActive]}>
-                Semua Dompet
+                {t('common_all_wallets')}
               </Text>
             </Pressable>
 
@@ -204,7 +219,7 @@ export default function TransactionsScreen() {
                       styles.catChipText,
                       isSelected && { color: w.color, fontWeight: '700' },
                     ]}>
-                    {w.name}
+                    {getWalletName(w)}
                   </Text>
                 </Pressable>
               );
@@ -273,7 +288,7 @@ export default function TransactionsScreen() {
             icon="receipt-outline"
             title={t('tx_empty_title')}
             description={
-              search || typeFilter !== 'all' || categoryFilter !== 'all'
+              search || typeFilter !== 'all' || categoryFilter !== 'all' || walletFilter !== 'all'
                 ? t('tx_empty_desc_filtered')
                 : t('tx_empty_desc_empty')
             }

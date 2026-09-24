@@ -19,7 +19,7 @@ interface ChartBarData {
 
 export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('monthly');
-  const { t, getDayNames, getMonthNames } = useI18n();
+  const { t, language, getDayNames, getMonthNames } = useI18n();
 
   // Aggregate transaction data based on selected filter with full defensive checks
   const chartData = useMemo<ChartBarData[]>(() => {
@@ -170,7 +170,9 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
 
       {/* Max range indicator */}
       <View style={styles.rangeInfo}>
-        <Text style={styles.rangeText}>Puncak Skala: {formatCurrencyShort(maxVal)}</Text>
+        <Text style={styles.rangeText}>
+          {t('chart_peak_scale', { amount: formatCurrencyShort(maxVal, language) })}
+        </Text>
       </View>
     </View>
   );

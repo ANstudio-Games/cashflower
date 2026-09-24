@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useI18n } from '@/i18n';
 import { PlanItem } from '@/components/plan-item';
 import { EmptyState } from '@/components/empty-state';
 import { colors, shadowStyles } from '@/theme/colors';
@@ -23,6 +24,7 @@ import { FinancialPlan } from '@/types';
 export default function PlansModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t, language } = useI18n();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
 
   const {
@@ -60,16 +62,16 @@ export default function PlansModal() {
   };
 
   const handleDelete = (id: string, title: string) => {
-    Alert.alert('Hapus Target', `Apakah Anda yakin ingin menghapus target "${title}"?`, [
-      { text: 'Batal', style: 'cancel' },
+    Alert.alert(t('plans_delete_title'), t('plans_delete_msg', { title }), [
+      { text: t('common_cancel'), style: 'cancel' },
       {
-        text: 'Hapus',
+        text: t('common_delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deletePlanById(id);
           } catch (err) {
-            Alert.alert('Error', 'Gagal menghapus target.');
+            Alert.alert(t('common_error'), t('plans_delete_err'));
           }
         },
       },
@@ -81,34 +83,35 @@ export default function PlansModal() {
     if (!plan) return;
 
     Alert.alert(
-      'Konfirmasi Pembelian',
-      `Selamat dana untuk "${plan.title}" telah mencukupi (${formatCurrency(plan.target_amount)})!\n\nBagaimana Anda ingin menyelesaikan target ini?`,
+      t('plans_fulfill_title'),
+      t('plans_fulfill_msg', { title: plan.title, amount: formatCurrency(plan.target_amount, language) }),
       [
-        { text: 'Batal', style: 'cancel' },
+        { text: t('common_cancel'), style: 'cancel' },
         {
-          text: 'Tandai Selesai Saja',
+          text: t('plans_fulfill_btn_mark_only'),
           onPress: async () => {
             try {
               await fulfillPlan(id, false);
-              Alert.alert('Sukses', `Target "${plan.title}" berhasil ditandai selesai.`);
+              Alert.alert(t('common_success'), t('plans_fulfill_mark_success', { title: plan.title }));
             } catch (err) {
-              Alert.alert('Error', 'Gagal menyelesaikan target.');
+              Alert.alert(t('common_error'), t('plans_fulfill_err'));
             }
           },
         },
         {
-          text: 'Beli & Catat Kas (-)',
+          text: t('plans_fulfill_btn_buy_record'),
           onPress: async () => {
             try {
               await fulfillPlan(id, true);
               Alert.alert(
-                'Selamat! 🎉',
-                `Target "${plan.title}" berhasil dibeli dan pengeluaran sebesar ${formatCurrency(
-                  plan.target_amount
-                )} telah dicatat ke arus kas.`
+                t('plans_fulfill_congrats_title'),
+                t('plans_fulfill_buy_success', {
+                  title: plan.title,
+                  amount: formatCurrency(plan.target_amount, language),
+                })
               );
             } catch (err) {
-              Alert.alert('Error', 'Gagal memproses pembelian.');
+              Alert.alert(t('common_error'), t('plans_fulfill_err'));
             }
           },
         },
@@ -123,7 +126,7 @@ export default function PlansModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Target & Rencana Impian</Text>
+        <Text style={styles.headerTitle}>{t('plans_modal_title')}</Text>
         <Pressable
           style={({ pressed }) => [styles.addHeaderBtn, pressed && { opacity: 0.8 }]}
           onPress={() => router.push('/modal/add-plan')}>
@@ -137,11 +140,11 @@ export default function PlansModal() {
           <Ionicons name="wallet-outline" size={20} color={colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.balanceSub}>Saldo Kas Berjalan Anda Saat Ini</Text>
-          <Text style={styles.balanceVal}>{formatCurrency(cashflowSummary.balance)}</Text>
+          <Text style={styles.balanceSub}>{t('plans_banner_cash_sub')}</Text>
+          <Text style={styles.balanceVal}>{formatCurrency(cashflowSummary.balance, language)}</Text>
         </View>
         <View style={styles.targetCountBadge}>
-          <Text style={styles.targetCountText}>{activePlans.length} Target Aktif</Text>
+          <Text style={styles.targetCountText}>{t('plans_active_count_badge', { count: activePlans.length })}</Text>
         </View>
       </View>
 
@@ -150,7 +153,7 @@ export default function PlansModal() {
         <Ionicons name="search-outline" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Cari target atau barang impian..."
+          placeholder={t('plans_search_placeholder')}
           placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
@@ -168,7 +171,7 @@ export default function PlansModal() {
           style={[styles.tabBtn, activeTab === 'active' && styles.tabBtnActive]}
           onPress={() => setActiveTab('active')}>
           <Text style={[styles.tabBtnText, activeTab === 'active' && styles.tabBtnTextActive]}>
-            Target Aktif ({activePlans.length})
+            {t('plans_tab_active', { count: activePlans.length })}
           </Text>
         </Pressable>
 
@@ -176,7 +179,7 @@ export default function PlansModal() {
           style={[styles.tabBtn, activeTab === 'completed' && styles.tabBtnActive]}
           onPress={() => setActiveTab('completed')}>
           <Text style={[styles.tabBtnText, activeTab === 'completed' && styles.tabBtnTextActive]}>
-            Sudah Tercapai ({completedPlans.length})
+            {t('plans_tab_completed', { count: completedPlans.length })}
           </Text>
         </Pressable>
       </View>
@@ -201,13 +204,13 @@ export default function PlansModal() {
         ListEmptyComponent={
           <EmptyState
             icon={activeTab === 'active' ? 'flag-outline' : 'trophy-outline'}
-            title={activeTab === 'active' ? 'Belum Ada Target Rencana' : 'Belum Ada Target Tercapai'}
+            title={activeTab === 'active' ? t('plans_empty_active_title') : t('plans_empty_completed_title')}
             description={
               activeTab === 'active'
-                ? 'Pasang target barang atau kebutuhan yang ingin Anda beli. Progres dana akan berjalan otomatis mengikuti saldo kas.'
-                : 'Target yang sudah Anda beli atau selesaikan akan tersimpan rapi di sini.'
+                ? t('plans_empty_active_desc')
+                : t('plans_empty_completed_desc')
             }
-            actionText={activeTab === 'active' ? 'Buat Target Baru' : undefined}
+            actionText={activeTab === 'active' ? t('plans_empty_active_btn') : undefined}
             onActionPress={activeTab === 'active' ? () => router.push('/modal/add-plan') : undefined}
           />
         }

@@ -2,9 +2,18 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Transaction } from '@/types';
 import { formatCurrency } from '@/utils/format-currency';
-import { formatDateShort } from '@/utils/format-date';
+import {
+  formatDateShortForLanguage,
+  formatDateTimeForLanguage,
+  getCategoryNameForLanguage,
+  getTransactionNotesForLanguage,
+  getTransactionTitleForLanguage,
+  getWalletNameForLanguage,
+  translate,
+} from '@/i18n';
 
 export interface ReportMetadata {
+  language: 'en' | 'id' | 'zh';
   businessName?: string;
   reporterName?: string;
   periodLabel: string;
@@ -12,92 +21,101 @@ export interface ReportMetadata {
   endDate?: string;
 }
 
-/**
- * Escape CSV string according to RFC 4180
- */
 function escapeCsv(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '""';
-  const str = String(value).replace(/"/g, '""');
-  return `"${str}"`;
+  const raw = String(value);
+  const safe = typeof value === 'string' && /^[=+\-@]/.test(raw.trimStart())
+    ? `'${raw}`
+    : raw;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
-/**
- * Generate CSV and share via native sharing dialog
- */
 export async function exportTransactionsToCsv(
   transactions: Transaction[],
   meta: ReportMetadata
 ): Promise<string> {
+  const language = meta.language;
+  const t = (key: string, params?: Record<string, string | number>) =>
+    translate(language, key, params);
+  const businessName = meta.businessName?.trim() || 'Cashflower';
+  const reporterName = meta.reporterName?.trim() || t('export_default_reporter_name');
   const totalIncome = transactions
-    .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
+    .filter((transaction) => transaction.type === 'income')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
   const totalExpense = transactions
-    .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
+    .filter((transaction) => transaction.type === 'expense')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
   const netBalance = totalIncome - totalExpense;
-
   const lines: string[] = [];
 
-  // Header metadata block
-  lines.push(`${escapeCsv('LAPORAN ARUS KAS & KEUANGAN CASHFLOWER')}`);
-  lines.push(`${escapeCsv('Nama Usaha / Unit')},${escapeCsv(meta.businessName || 'Cashflower')}`);
-  lines.push(`${escapeCsv('Dibuat Oleh')},${escapeCsv(meta.reporterName || 'Staf Keuangan')}`);
-  lines.push(`${escapeCsv('Periode')},${escapeCsv(meta.periodLabel)}`);
-  lines.push(`${escapeCsv('Tanggal Ekspor')},${escapeCsv(new Date().toLocaleString('id-ID'))}`);
+  lines.push(escapeCsv(t('report_title')));
+  lines.push(`${escapeCsv(t('report_business_unit'))},${escapeCsv(businessName)}`);
+  lines.push(`${escapeCsv(t('report_created_by'))},${escapeCsv(reporterName)}`);
+  lines.push(`${escapeCsv(t('report_period'))},${escapeCsv(meta.periodLabel)}`);
+  lines.push(`${escapeCsv(t('report_exported_at'))},${escapeCsv(formatDateTimeForLanguage(new Date(), language))}`);
   lines.push('');
-  lines.push(`${escapeCsv('RINGKASAN KAS')}`);
-  lines.push(`${escapeCsv('Total Pemasukan')},${escapeCsv(formatCurrency(totalIncome))}`);
-  lines.push(`${escapeCsv('Total Pengeluaran')},${escapeCsv(formatCurrency(totalExpense))}`);
-  lines.push(`${escapeCsv('Arus Kas Bersih (Surplus/Defisit)')},${escapeCsv(formatCurrency(netBalance))}`);
-  lines.push(`${escapeCsv('Total Transaksi')},${escapeCsv(transactions.length)}`);
+  lines.push(escapeCsv(t('report_cash_summary')));
+  lines.push(`${escapeCsv(t('report_total_income'))},${escapeCsv(formatCurrency(totalIncome, language))}`);
+  lines.push(`${escapeCsv(t('report_total_expense'))},${escapeCsv(formatCurrency(totalExpense, language))}`);
+  lines.push(`${escapeCsv(t('report_net_cashflow'))},${escapeCsv(formatCurrency(netBalance, language))}`);
+  lines.push(`${escapeCsv(t('report_total_transactions'))},${escapeCsv(transactions.length)}`);
   lines.push('');
-
-  // Table header
   lines.push([
-    escapeCsv('No'),
-    escapeCsv('Tanggal'),
-    escapeCsv('Jenis Transaksi'),
-    escapeCsv('Dompet / Akun'),
-    escapeCsv('Kategori'),
-    escapeCsv('Keterangan / Nama Barang'),
-    escapeCsv('Nominal (Rp)'),
-    escapeCsv('Catatan / Nomor Nota'),
+    escapeCsv(t('report_no')),
+    escapeCsv(t('report_date')),
+    escapeCsv(t('report_transaction_type')),
+    escapeCsv(t('report_wallet_account')),
+    escapeCsv(t('report_category')),
+    escapeCsv(t('report_description_item')),
+    escapeCsv(t('report_amount_idr')),
+    escapeCsv(t('report_notes_receipt')),
   ].join(','));
 
-  // Table rows
-  transactions.forEach((t, idx) => {
-    const isIncome = t.type === 'income';
-    const isTransfer = t.type === 'transfer';
-    const typeLabel = isTransfer ? 'Transfer' : isIncome ? 'Pemasukan' : 'Pengeluaran';
+  transactions.forEach((transaction, index) => {
+    const isIncome = transaction.type === 'income';
+    const isTransfer = transaction.type === 'transfer';
+    const typeLabel = isTransfer
+      ? t('common_transfer')
+      : isIncome
+      ? t('common_income')
+      : t('common_expense');
+    const sourceWallet = getWalletNameForLanguage(language, {
+      id: transaction.wallet_id,
+      name: transaction.wallet_name,
+    });
+    const destinationWallet = getWalletNameForLanguage(language, {
+      id: transaction.destination_wallet_id,
+      name: transaction.destination_wallet_name,
+    });
     const walletLabel = isTransfer
-      ? `${t.wallet_name || 'Dompet'} ➔ ${t.destination_wallet_name || 'Tujuan'}`
-      : (t.wallet_name || 'Dompet Utama');
-    const amountStr = isTransfer ? `${t.amount}` : isIncome ? `+${t.amount}` : `-${t.amount}`;
+      ? `${sourceWallet || t('common_wallet')} ➔ ${destinationWallet || t('common_destination')}`
+      : sourceWallet || t('common_primary_wallet');
+    const categoryLabel = getCategoryNameForLanguage(language, {
+      id: transaction.category_id,
+      name: transaction.category_name,
+    }) || (isTransfer ? t('common_transfer') : t('common_others'));
+    const amount = isTransfer
+      ? transaction.amount
+      : isIncome
+      ? transaction.amount
+      : -transaction.amount;
 
     lines.push([
-      escapeCsv(idx + 1),
-      escapeCsv(t.date),
+      escapeCsv(index + 1),
+      escapeCsv(formatDateShortForLanguage(transaction.date, language)),
       escapeCsv(typeLabel),
       escapeCsv(walletLabel),
-      escapeCsv(t.category_name || (isTransfer ? 'Transfer' : 'Lainnya')),
-      escapeCsv(t.title),
-      escapeCsv(amountStr),
-      escapeCsv(t.notes || ''),
+      escapeCsv(categoryLabel),
+      escapeCsv(getTransactionTitleForLanguage(transaction, language)),
+      escapeCsv(amount),
+      escapeCsv(getTransactionNotesForLanguage(transaction, language)),
     ].join(','));
   });
 
-  // Prepend UTF-8 BOM so Excel opens it with correct Indonesian accents and numbers
   const csvContent = '\uFEFF' + lines.join('\r\n');
-
   const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(
-    now.getDate()
-  ).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-  
-  const safeBusiness = (meta.businessName || 'Cashflower').replace(/[^a-zA-Z0-9]/g, '_');
-  const filename = `Laporan_Keuangan_${safeBusiness}_${dateStr}.csv`;
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  const filename = `Cashflower_Report_${dateStr}.csv`;
   const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
   await FileSystem.writeAsStringAsync(fileUri, csvContent, {
@@ -108,11 +126,11 @@ export async function exportTransactionsToCsv(
   if (isAvailable) {
     await Sharing.shareAsync(fileUri, {
       mimeType: 'text/csv',
-      dialogTitle: 'Bagikan Laporan Spreadsheet CSV/Excel',
+      dialogTitle: t('report_share_csv_title'),
       UTI: 'public.comma-separated-values-text',
     });
   } else {
-    throw new Error('Fitur berbagi file tidak tersedia di perangkat ini.');
+    throw new Error('sharing_unavailable');
   }
 
   return fileUri;

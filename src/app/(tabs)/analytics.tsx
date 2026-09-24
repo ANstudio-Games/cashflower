@@ -11,8 +11,8 @@ import { formatCurrency } from '@/utils/format-currency';
 import { useI18n } from '@/i18n';
 
 // Error boundary to prevent any chart error from crashing the entire app
-class ChartErrorBoundary extends Component<{ children: ReactNode; title: string; fallbackText?: string }, { hasError: boolean }> {
-  constructor(props: { children: ReactNode; title: string; fallbackText?: string }) {
+class ChartErrorBoundary extends Component<{ children: ReactNode; title: string; fallbackText: string }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; title: string; fallbackText: string }) {
     super(props);
     this.state = { hasError: false };
   }
@@ -31,7 +31,7 @@ class ChartErrorBoundary extends Component<{ children: ReactNode; title: string;
         <View style={styles.errorCard}>
           <Ionicons name="alert-circle-outline" size={24} color={colors.warning} />
           <Text style={styles.errorText}>
-            {this.props.fallbackText || 'Grafik sementara tidak dapat ditampilkan.'}
+            {this.props.fallbackText}
           </Text>
         </View>
       );
@@ -43,7 +43,7 @@ class ChartErrorBoundary extends Component<{ children: ReactNode; title: string;
 export default function AnalyticsScreen() {
   const router = useRouter();
   const { transactions, categories, cashflowSummary } = useFinance();
-  const { t, getCategoryName } = useI18n();
+  const { t, getCategoryName, language } = useI18n();
 
   // Safe category breakdown calculation
   const categoryBreakdown = useMemo(() => {
@@ -98,7 +98,7 @@ export default function AnalyticsScreen() {
           style={({ pressed }) => [styles.exportHeaderBtn, pressed && { opacity: 0.8 }]}
           onPress={() => router.push('/modal/export-report')}>
           <Ionicons name="document-text-outline" size={16} color={colors.primary} />
-          <Text style={styles.exportHeaderBtnText}>{t('common_export') || 'Export'}</Text>
+          <Text style={styles.exportHeaderBtnText}>{t('common_export')}</Text>
         </Pressable>
       </View>
 
@@ -108,7 +108,7 @@ export default function AnalyticsScreen() {
           <View style={[styles.kpiCard, shadowStyles.sm]}>
             <Text style={styles.kpiLabel}>{t('analytics_total_income')}</Text>
             <Text style={[styles.kpiValue, { color: colors.incomeDark }]}>
-              {formatCurrency(cashflowSummary?.totalIncome || 0)}
+              {formatCurrency(cashflowSummary?.totalIncome || 0, language)}
             </Text>
             <View style={[styles.kpiPill, { backgroundColor: colors.incomeSoft }]}>
               <Ionicons name="arrow-down" size={12} color={colors.incomeDark} />
@@ -119,7 +119,7 @@ export default function AnalyticsScreen() {
           <View style={[styles.kpiCard, shadowStyles.sm]}>
             <Text style={styles.kpiLabel}>{t('analytics_total_spent')}</Text>
             <Text style={[styles.kpiValue, { color: colors.expenseDark }]}>
-              {formatCurrency(cashflowSummary?.totalExpense || 0)}
+              {formatCurrency(cashflowSummary?.totalExpense || 0, language)}
             </Text>
             <View style={[styles.kpiPill, { backgroundColor: colors.expenseSoft }]}>
               <Ionicons name="arrow-up" size={12} color={colors.expenseDark} />
@@ -147,7 +147,7 @@ export default function AnalyticsScreen() {
           <Ionicons name="stats-chart" size={18} color={colors.primary} />
           <Text style={styles.sectionTitle}>{t('analytics_trend_title')}</Text>
         </View>
-        <ChartErrorBoundary title="Tren Arus Kas" fallbackText={t('analytics_chart_error')}>
+        <ChartErrorBoundary title={t('analytics_trend_title')} fallbackText={t('analytics_chart_error')}>
           <CashflowBarChart transactions={transactions} />
         </ChartErrorBoundary>
 
@@ -156,7 +156,7 @@ export default function AnalyticsScreen() {
           <Ionicons name="pie-chart" size={18} color={colors.primary} />
           <Text style={styles.sectionTitle}>{t('analytics_category_title')}</Text>
         </View>
-        <ChartErrorBoundary title="Kategori Pengeluaran" fallbackText={t('analytics_chart_error')}>
+        <ChartErrorBoundary title={t('analytics_category_title')} fallbackText={t('analytics_chart_error')}>
           <CategoryDonutChart
             data={categoryBreakdown}
             totalExpense={cashflowSummary?.totalExpense || 0}

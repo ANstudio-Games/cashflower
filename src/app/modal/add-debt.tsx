@@ -123,7 +123,7 @@ export default function AddDebtModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawAmount ? parseInt(rawAmount, 10).toLocaleString('id-ID') : ''}
+              value={rawAmount}
               onChangeText={handleAmountChange}
               autoFocus
             />
