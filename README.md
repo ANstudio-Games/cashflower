@@ -2,7 +2,7 @@
 
 > **Aplikasi Pencatatan Keuangan, Arus Kas (Cash Flow), Hutang-Piutang, dan Jurnal Investasi Berbasis Offline-First.**
 
-[![Version](https://img.shields.io/badge/version-1.3.0-teal.svg)](#)
+[![Version](https://img.shields.io/badge/version-1.4.0-teal.svg)](#)
 [![Expo](https://img.shields.io/badge/Expo-SDK%2057-000020.svg?logo=expo)](#)
 [![React Native](https://img.shields.io/badge/React%20Native-0.86-61DAFB.svg?logo=react)](#)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(Local)-003B57.svg?logo=sqlite)](#)
