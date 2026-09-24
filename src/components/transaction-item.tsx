@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Transaction } from '@/types';
 import { colors } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
-import { getRelativeDateLabel } from '@/utils/format-date';
+import { useI18n } from '@/i18n';
 
 interface TransactionItemProps {
   item: Transaction;
@@ -21,15 +21,16 @@ export function TransactionItem({
 }: TransactionItemProps) {
   const isIncome = item.type === 'income';
   const isTransfer = item.type === 'transfer';
+  const { t, getRelativeDateLabel, getCategoryName } = useI18n();
 
   const handleDelete = () => {
     if (!onDelete) return;
     Alert.alert(
-      'Hapus Transaksi',
-      `Yakin ingin menghapus catatan "${item.title}"?`,
+      t('tx_delete_confirm_title'),
+      t('tx_delete_confirm_msg', { title: item.title }),
       [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Hapus', style: 'destructive', onPress: () => onDelete(item.id) },
+        { text: t('common_cancel'), style: 'cancel' },
+        { text: t('common_delete'), style: 'destructive', onPress: () => onDelete(item.id) },
       ]
     );
   };
@@ -60,7 +61,7 @@ export function TransactionItem({
             <View style={[styles.walletBadge, { backgroundColor: '#EEF2FF' }]}>
               <Ionicons name="swap-horizontal" size={11} color="#6366F1" />
               <Text style={[styles.walletBadgeText, { color: '#6366F1' }]}>
-                {item.wallet_name || 'Dompet'} ➔ {item.destination_wallet_name || 'Tujuan'}
+                {item.wallet_name || 'Wallet'} ➔ {item.destination_wallet_name || 'Dest'}
               </Text>
             </View>
           ) : (
@@ -86,7 +87,8 @@ export function TransactionItem({
                 </>
               )}
               <Text style={styles.categoryName}>
-                {item.category_name || (isIncome ? 'Pemasukan' : 'Pengeluaran')}
+                {getCategoryName({ id: item.category_id, name: item.category_name }) ||
+                  (isIncome ? t('common_income') : t('common_expense'))}
               </Text>
             </>
           )}

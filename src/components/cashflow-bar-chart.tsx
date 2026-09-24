@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors } from '@/theme/colors';
 import { formatCurrencyShort } from '@/utils/format-currency';
 import { Transaction } from '@/types';
+import { useI18n } from '@/i18n';
 
 type TimeFilter = 'daily' | 'monthly' | 'yearly';
 
@@ -18,6 +19,7 @@ interface ChartBarData {
 
 export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('monthly');
+  const { t, getDayNames, getMonthNames } = useI18n();
 
   // Aggregate transaction data based on selected filter with full defensive checks
   const chartData = useMemo<ChartBarData[]>(() => {
@@ -27,12 +29,12 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
     if (filter === 'daily') {
       // Last 7 days
       const days: ChartBarData[] = [];
+      const dayNames = getDayNames();
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);
         const iso = d.toISOString().split('T')[0];
-        const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-        const label = i === 0 ? 'Hari ini' : dayNames[d.getDay()];
+        const label = i === 0 ? t('chart_today') : (dayNames[d.getDay()] || '');
 
         const dayTxs = safeTxs.filter((t) => (t?.date || '') === iso);
         const income = dayTxs.filter((t) => t?.type === 'income').reduce((acc, t) => acc + (t?.amount || 0), 0);
@@ -45,14 +47,14 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
     if (filter === 'monthly') {
       // Last 6 months
       const months: ChartBarData[] = [];
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const monthNames = getMonthNames();
 
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const prefix = `${y}-${m}`;
-        const label = `${monthNames[d.getMonth()]}`;
+        const label = `${monthNames[d.getMonth()] || ''}`;
 
         const monthTxs = safeTxs.filter((t) => typeof t?.date === 'string' && t.date.startsWith(prefix));
         const income = monthTxs.filter((t) => t?.type === 'income').reduce((acc, t) => acc + (t?.amount || 0), 0);
@@ -73,7 +75,7 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
       years.push({ label: `${y}`, income, expense });
     }
     return years;
-  }, [transactions, filter]);
+  }, [transactions, filter, getDayNames, getMonthNames, t]);
 
   // Find maximum value to scale the bars safely
   const maxVal = useMemo(() => {
@@ -94,17 +96,17 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
         <Pressable
           style={[styles.filterTab, filter === 'daily' && styles.filterTabActive]}
           onPress={() => setFilter('daily')}>
-          <Text style={[styles.filterText, filter === 'daily' && styles.filterTextActive]}>Harian</Text>
+          <Text style={[styles.filterText, filter === 'daily' && styles.filterTextActive]}>{t('chart_daily')}</Text>
         </Pressable>
         <Pressable
           style={[styles.filterTab, filter === 'monthly' && styles.filterTabActive]}
           onPress={() => setFilter('monthly')}>
-          <Text style={[styles.filterText, filter === 'monthly' && styles.filterTextActive]}>Bulanan</Text>
+          <Text style={[styles.filterText, filter === 'monthly' && styles.filterTextActive]}>{t('chart_monthly')}</Text>
         </Pressable>
         <Pressable
           style={[styles.filterTab, filter === 'yearly' && styles.filterTabActive]}
           onPress={() => setFilter('yearly')}>
-          <Text style={[styles.filterText, filter === 'yearly' && styles.filterTextActive]}>Tahunan</Text>
+          <Text style={[styles.filterText, filter === 'yearly' && styles.filterTextActive]}>{t('chart_yearly')}</Text>
         </Pressable>
       </View>
 
@@ -112,11 +114,11 @@ export function CashflowBarChart({ transactions }: CashflowBarChartProps) {
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={[styles.legendIndicator, { backgroundColor: colors.income }]} />
-          <Text style={styles.legendText}>Pemasukan</Text>
+          <Text style={styles.legendText}>{t('common_income')}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendIndicator, { backgroundColor: colors.expense }]} />
-          <Text style={styles.legendText}>Pengeluaran</Text>
+          <Text style={styles.legendText}>{t('common_expense')}</Text>
         </View>
       </View>
 
