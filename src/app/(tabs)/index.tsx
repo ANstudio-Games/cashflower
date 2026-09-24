@@ -18,9 +18,11 @@ import { PlanItem } from '@/components/plan-item';
 import { EmptyState } from '@/components/empty-state';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
+import { useI18n } from '@/i18n';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const {
     transactions,
     wallets,
@@ -70,7 +72,7 @@ export default function HomeScreen() {
             <Text style={styles.brandEmoji}>🌸</Text>
             <Text style={styles.brandTitle}>Cashflower</Text>
           </View>
-          <Text style={styles.headerSubtitle}>Pencatatan Keuangan & Arus Kas</Text>
+          <Text style={styles.headerSubtitle}>{t('app_tagline')}</Text>
         </View>
 
         <View style={styles.headerActions}>
@@ -170,12 +172,12 @@ export default function HomeScreen() {
               </View>
               <View>
                 <Text style={styles.budgetWidgetTitle}>
-                  {globalBudget ? 'Target Anggaran Bulan Ini' : 'Atur Batas Belanja Bulanan'}
+                  {globalBudget ? t('home_budget_title') : t('home_budget_setup')}
                 </Text>
                 <Text style={styles.budgetWidgetSub}>
                   {globalBudget
-                    ? `${formatCurrency(spent)} dari ${formatCurrency(limit)}`
-                    : 'Pasang limit agar tidak boros'}
+                    ? t('home_budget_spent_of', { spent: formatCurrency(spent), limit: formatCurrency(limit) })
+                    : t('home_budget_tip')}
                 </Text>
               </View>
             </View>
@@ -270,14 +272,14 @@ export default function HomeScreen() {
               </View>
               <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
             </View>
-            <Text style={styles.widgetTitle}>Piutang Tertagih</Text>
+            <Text style={styles.widgetTitle}>{t('home_receivable_title')}</Text>
             <Text style={[styles.widgetValue, { color: colors.receivableDark }]}>
               {formatCurrency(debtSummary.totalReceivable)}
             </Text>
             <Text style={styles.widgetSubtext}>
               {debtSummary.unpaidCount > 0
-                ? `${debtSummary.unpaidCount} tagihan aktif`
-                : 'Tidak ada hutang aktif'}
+                ? t('home_receivable_active', { count: debtSummary.unpaidCount })
+                : t('home_no_active_debt')}
             </Text>
           </Pressable>
 
@@ -291,7 +293,7 @@ export default function HomeScreen() {
               </View>
               <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
             </View>
-            <Text style={styles.widgetTitle}>Hasil Trading</Text>
+            <Text style={styles.widgetTitle}>{t('home_trading_result')}</Text>
             <Text
               style={[
                 styles.widgetValue,
@@ -303,17 +305,17 @@ export default function HomeScreen() {
             <Text style={styles.widgetSubtext}>
               {investmentSummary.totalTrades > 0
                 ? `${investmentSummary.winCount}W / ${investmentSummary.lossCount}L (${investmentSummary.netReturnPercentage.toFixed(1)}%)`
-                : 'Belum ada trading'}
+                : t('home_no_trades')}
             </Text>
           </Pressable>
         </View>
 
         {/* Recent Transactions Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Belanjaan & Transaksi Terbaru</Text>
+          <Text style={styles.sectionTitle}>{t('home_recent_transactions')}</Text>
           {transactions.length > 0 ? (
             <Pressable onPress={() => router.push('/(tabs)/transactions')} hitSlop={8}>
-              <Text style={styles.seeAllText}>Lihat Semua</Text>
+              <Text style={styles.seeAllText}>{t('common_see_all')}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -334,9 +336,9 @@ export default function HomeScreen() {
           <View style={[styles.transactionsCard, shadowStyles.sm]}>
             <EmptyState
               icon="receipt-outline"
-              title="Belum Ada Transaksi"
-              description="Catat pengeluaran barang belanjaan atau uang masuk pertama Anda untuk mulai memantau cashflow."
-              actionText="Tambah Transaksi"
+              title={t('home_empty_title')}
+              description={t('home_empty_desc')}
+              actionText={t('home_add_transaction')}
               onActionPress={() => router.push('/modal/add-transaction')}
             />
           </View>
@@ -673,7 +675,7 @@ const styles = StyleSheet.create({
   },
   addWalletCard: {
     width: 110,
-    minHeight: 110,
+    minHeight: 116,
     borderRadius: 16,
     backgroundColor: colors.surface,
     borderWidth: 1.5,

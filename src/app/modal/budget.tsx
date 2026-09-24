@@ -17,12 +17,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
 import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { useI18n } from '@/i18n';
 
 export default function BudgetModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { categories, budgets, saveNewBudget, removeBudget } = useFinance();
+  const { t, getCategoryName } = useI18n();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('global'); // 'global' or categoryId
   const [rawLimit, setRawLimit] = useState('');
@@ -32,7 +34,7 @@ export default function BudgetModal() {
   const handleSave = async () => {
     const limit = parseInt(rawLimit, 10);
     if (!limit || limit <= 0) {
-      Alert.alert('Perhatian', 'Mohon masukkan nominal batas anggaran yang valid.');
+      Alert.alert(t('common_attention'), t('budget_err_limit'));
       return;
     }
 
@@ -45,17 +47,17 @@ export default function BudgetModal() {
         monthly_limit: limit,
       });
       setRawLimit('');
-      Alert.alert('Berhasil', 'Target anggaran berhasil disimpan.');
+      Alert.alert(t('common_success'), t('budget_saved_success'));
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Gagal menyimpan target anggaran.');
+      Alert.alert(t('common_error'), t('budget_err_limit'));
     }
   };
 
   const handleDelete = (id: string, name: string) => {
-    Alert.alert('Hapus Anggaran', `Hapus target anggaran untuk ${name}?`, [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Hapus', style: 'destructive', onPress: () => removeBudget(id) },
+    Alert.alert(t('budget_delete_title'), t('budget_delete_msg', { name }), [
+      { text: t('common_cancel'), style: 'cancel' },
+      { text: t('common_delete'), style: 'destructive', onPress: () => removeBudget(id) },
     ]);
   };
 
@@ -68,20 +70,18 @@ export default function BudgetModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Target Budgeting</Text>
+        <Text style={styles.headerTitle}>{t('budget_modal_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Form to Set / Update Budget */}
         <View style={styles.formCard}>
-          <Text style={styles.cardTitle}>Tetapkan Batas Belanja Bulanan</Text>
-          <Text style={styles.cardSub}>
-            Pasang batas maksimal agar Anda mendapat peringatan saat pengeluaran mendekati limit.
-          </Text>
+          <Text style={styles.cardTitle}>{t('budget_form_title')}</Text>
+          <Text style={styles.cardSub}>{t('budget_form_desc')}</Text>
 
           {/* Scope Selector */}
-          <Text style={styles.inputLabel}>Pilih Target Anggaran</Text>
+          <Text style={styles.inputLabel}>{t('budget_select_target')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scopeRow}>
             <Pressable
               style={[styles.scopeChip, selectedCategory === 'global' && styles.scopeChipActive]}
@@ -96,7 +96,7 @@ export default function BudgetModal() {
                   styles.scopeChipText,
                   selectedCategory === 'global' && styles.scopeChipTextActive,
                 ]}>
-                Total Keseluruhan
+                {t('budget_overall_total')}
               </Text>
             </Pressable>
 
@@ -122,7 +122,7 @@ export default function BudgetModal() {
                         styles.scopeChipText,
                         isSelected && { color: cat.color, fontWeight: '700' },
                       ]}>
-                      {cat.name}
+                      {getCategoryName(cat)}
                     </Text>
                   </Pressable>
                 );
@@ -149,16 +149,16 @@ export default function BudgetModal() {
             style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}
             onPress={handleSave}>
             <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-            <Text style={styles.saveBtnText}>Simpan Batas Anggaran</Text>
+            <Text style={styles.saveBtnText}>{t('budget_save_btn')}</Text>
           </Pressable>
         </View>
 
         {/* List of Active Budgets */}
-        <Text style={styles.sectionHeader}>Status Anggaran Bulan Ini</Text>
+        <Text style={styles.sectionHeader}>{t('budget_status_header')}</Text>
         {budgets.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="pie-chart-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyText}>Belum ada batas anggaran yang ditetapkan.</Text>
+            <Text style={styles.emptyText}>{t('budget_empty_desc')}</Text>
           </View>
         ) : (
           budgets.map((b) => {
@@ -172,7 +172,10 @@ export default function BudgetModal() {
             if (isWarning) progressColor = colors.warning;
             if (isOver) progressColor = colors.expense;
 
-            const title = b.category_id === null ? 'Total Pengeluaran Bulanan' : b.category_name || 'Kategori';
+            const title =
+              b.category_id === null
+                ? t('budget_overall_spending')
+                : getCategoryName({ id: b.category_id, name: b.category_name }) || t('common_others');
 
             return (
               <View key={b.id} style={styles.budgetItemCard}>
@@ -180,7 +183,7 @@ export default function BudgetModal() {
                   <View style={styles.budgetTitleCol}>
                     <Text style={styles.budgetTitle}>{title}</Text>
                     <Text style={styles.budgetSub}>
-                      Terpakai: {formatCurrency(spent)} dari {formatCurrency(limit)}
+                      {t('budget_spent_label', { spent: formatCurrency(spent), limit: formatCurrency(limit) })}
                     </Text>
                   </View>
                   <View style={styles.budgetRight}>
@@ -211,7 +214,7 @@ export default function BudgetModal() {
 
                 {isOver && (
                   <Text style={styles.overWarningText}>
-                    ⚠️ Melebihi anggaran sebesar {formatCurrency(spent - limit)}!
+                    {t('budget_warning_over', { amount: formatCurrency(spent - limit) })}
                   </Text>
                 )}
               </View>

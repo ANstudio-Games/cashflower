@@ -8,20 +8,25 @@ import { InvestmentItem } from '@/components/investment-item';
 import { EmptyState } from '@/components/empty-state';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
-
-const INSTRUMENT_FILTERS = [
-  { id: 'all', label: 'Semua' },
-  { id: 'saham', label: 'Saham' },
-  { id: 'kripto', label: 'Kripto' },
-  { id: 'forex', label: 'Forex' },
-  { id: 'emas', label: 'Emas' },
-  { id: 'reksadana', label: 'Reksa Dana' },
-  { id: 'lainnya', label: 'Lainnya' },
-];
+import { useI18n } from '@/i18n';
 
 export default function InvestmentsScreen() {
   const router = useRouter();
   const { investments, investmentSummary, deleteInvestmentById } = useFinance();
+  const { t } = useI18n();
+
+  const instrumentFilters = useMemo(
+    () => [
+      { id: 'all', label: t('common_all') },
+      { id: 'saham', label: t('inst_saham') },
+      { id: 'kripto', label: t('inst_kripto') },
+      { id: 'forex', label: t('inst_forex') },
+      { id: 'emas', label: t('inst_emas') },
+      { id: 'reksadana', label: t('inst_reksadana') },
+      { id: 'lainnya', label: t('inst_lainnya') },
+    ],
+    [t]
+  );
 
   const [selectedInstrument, setSelectedInstrument] = useState('all');
 
@@ -41,8 +46,8 @@ export default function InvestmentsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Trading & Investasi</Text>
-          <Text style={styles.headerSubtitle}>Jurnal keuntungan dan performa trading</Text>
+          <Text style={styles.headerTitle}>{t('inv_header_title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('inv_header_subtitle')}</Text>
         </View>
 
         <Pressable
@@ -56,7 +61,7 @@ export default function InvestmentsScreen() {
       <View style={[styles.portfolioCard, shadowStyles.md]}>
         <View style={styles.portfolioTop}>
           <View>
-            <Text style={styles.portfolioLabel}>Net Profit / Loss</Text>
+            <Text style={styles.portfolioLabel}>{t('inv_net_pnl')}</Text>
             <Text
               style={[
                 styles.portfolioPnl,
@@ -92,17 +97,17 @@ export default function InvestmentsScreen() {
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <View style={styles.statCol}>
-            <Text style={styles.statColLabel}>Total Modal</Text>
+            <Text style={styles.statColLabel}>{t('inv_total_capital')}</Text>
             <Text style={styles.statColVal}>{formatCurrency(investmentSummary.totalCapital)}</Text>
           </View>
           <View style={styles.verticalLine} />
           <View style={styles.statCol}>
-            <Text style={styles.statColLabel}>Win Rate</Text>
+            <Text style={styles.statColLabel}>{t('inv_win_rate')}</Text>
             <Text style={styles.statColVal}>{winRate}%</Text>
           </View>
           <View style={styles.verticalLine} />
           <View style={styles.statCol}>
-            <Text style={styles.statColLabel}>Menang / Kalah</Text>
+            <Text style={styles.statColLabel}>{t('inv_win_loss')}</Text>
             <Text style={styles.statColVal}>
               <Text style={{ color: colors.incomeDark }}>{investmentSummary.winCount}W</Text> :{' '}
               <Text style={{ color: colors.expenseDark }}>{investmentSummary.lossCount}L</Text>
@@ -117,7 +122,7 @@ export default function InvestmentsScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}>
-          {INSTRUMENT_FILTERS.map((item) => {
+          {instrumentFilters.map((item) => {
             const isSelected = selectedInstrument === item.id;
             return (
               <Pressable
@@ -147,9 +152,9 @@ export default function InvestmentsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="trending-up-outline"
-            title="Belum Ada Catatan Trading"
-            description="Catat hasil beli dan jual saham, kripto, atau aset investasi Anda untuk mengukur untung/rugi secara akurat."
-            actionText="Catat Trading Baru"
+            title={t('inv_empty_title')}
+            description={t('inv_empty_desc')}
+            actionText={t('inv_record_action')}
             onActionPress={() => router.push('/modal/add-investment')}
           />
         }

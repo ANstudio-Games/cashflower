@@ -19,12 +19,14 @@ import { colors } from '@/theme/colors';
 import { parseCurrencyInput } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { DebtType } from '@/types';
+import { useI18n } from '@/i18n';
 
 export default function AddDebtModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createDebt } = useFinance();
+  const { t } = useI18n();
 
   const [type, setType] = useState<DebtType>('receivable'); // default: Piutang (orang pinjam ke saya)
   const [personName, setPersonName] = useState('');
@@ -41,11 +43,11 @@ export default function AddDebtModal() {
   const handleSave = async () => {
     const amount = parseInt(rawAmount, 10);
     if (!amount || amount <= 0) {
-      Alert.alert('Perhatian', 'Mohon masukkan nominal uang yang valid.');
+      Alert.alert(t('common_attention'), t('debt_modal_err_amount'));
       return;
     }
     if (!personName.trim()) {
-      Alert.alert('Perhatian', 'Mohon isi nama orang / pihak terkait.');
+      Alert.alert(t('common_attention'), t('debt_modal_err_person'));
       return;
     }
 
@@ -62,7 +64,7 @@ export default function AddDebtModal() {
       router.back();
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Gagal menyimpan catatan hutang/piutang.');
+      Alert.alert(t('common_error'), t('debt_modal_err_save'));
     }
   };
 
@@ -77,7 +79,7 @@ export default function AddDebtModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Catat Hutang / Piutang</Text>
+        <Text style={styles.headerTitle}>{t('debt_modal_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -93,7 +95,7 @@ export default function AddDebtModal() {
               color={isReceivable ? colors.receivableDark : colors.textSecondary}
             />
             <Text style={[styles.typeText, isReceivable && styles.typeTextActiveReceivable]}>
-              Piutang (Saya Menagih)
+              {t('debt_modal_type_receivable')}
             </Text>
           </Pressable>
 
@@ -106,14 +108,14 @@ export default function AddDebtModal() {
               color={!isReceivable ? colors.debtDark : colors.textSecondary}
             />
             <Text style={[styles.typeText, !isReceivable && styles.typeTextActivePayable]}>
-              Hutang (Saya Membayar)
+              {t('debt_modal_type_payable')}
             </Text>
           </Pressable>
         </View>
 
         {/* Amount Input */}
         <View style={styles.amountCard}>
-          <Text style={styles.inputLabel}>Jumlah Uang Pinjaman</Text>
+          <Text style={styles.inputLabel}>{t('debt_modal_amount_label')}</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
             <TextInput
@@ -131,11 +133,15 @@ export default function AddDebtModal() {
         {/* Person Name */}
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>
-            {isReceivable ? 'Nama Peminjam (Siapa yang berhutang?)' : 'Nama Pemberi Pinjaman'}
+            {isReceivable ? t('debt_modal_person_receivable') : t('debt_modal_person_payable')}
           </Text>
           <TextInput
             style={styles.textInput}
-            placeholder={isReceivable ? 'Contoh: Budi Santoso, Teman Kantor' : 'Contoh: Bank BCA, Mas Rian'}
+            placeholder={
+              isReceivable
+                ? t('debt_modal_placeholder_receivable')
+                : t('debt_modal_placeholder_payable')
+            }
             placeholderTextColor={colors.textMuted}
             value={personName}
             onChangeText={setPersonName}
@@ -144,7 +150,7 @@ export default function AddDebtModal() {
 
         {/* Dates */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Tanggal Pinjam (YYYY-MM-DD)</Text>
+          <Text style={styles.sectionTitle}>{t('debt_modal_issue_date')}</Text>
           <TextInput
             style={styles.textInput}
             placeholder="YYYY-MM-DD"
@@ -156,11 +162,11 @@ export default function AddDebtModal() {
 
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>
-            Tanggal Jatuh Tempo / Tagih (Opsional - YYYY-MM-DD)
+            {t('debt_modal_due_date')}
           </Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Misal: 2026-10-01"
+            placeholder={t('debt_modal_due_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={dueDate}
             onChangeText={setDueDate}
@@ -169,10 +175,10 @@ export default function AddDebtModal() {
 
         {/* Notes */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Catatan / Keperluan Pinjaman</Text>
+          <Text style={styles.sectionTitle}>{t('debt_modal_notes_label')}</Text>
           <TextInput
             style={[styles.textInput, styles.textArea]}
-            placeholder="Misal: Pinjam untuk perbaikan motor, janji gajian depan..."
+            placeholder={t('debt_modal_notes_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={notes}
             onChangeText={setNotes}
@@ -186,7 +192,7 @@ export default function AddDebtModal() {
           style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.85 }]}
           onPress={handleSave}>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-          <Text style={styles.submitBtnText}>Simpan Catatan</Text>
+          <Text style={styles.submitBtnText}>{t('debt_modal_save')}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -19,6 +19,7 @@ import { colors } from '@/theme/colors';
 import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { TransactionType } from '@/types';
+import { useI18n } from '@/i18n';
 
 export default function AddTransactionModal() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function AddTransactionModal() {
   const isEditing = !!params.id;
 
   const { categories, transactions, wallets, createTransaction, editTransaction, isMultiWalletEnabled } = useFinance();
+  const { t, getCategoryName } = useI18n();
 
   const [type, setType] = useState<TransactionType>('expense');
   const [rawAmount, setRawAmount] = useState<string>('');
@@ -84,15 +86,15 @@ export default function AddTransactionModal() {
   const handleSubmit = async () => {
     const amount = parseFloat(rawAmount);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Perhatian', 'Mohon masukkan nominal uang yang valid.');
+      Alert.alert(t('common_attention'), t('tx_modal_err_amount'));
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Perhatian', 'Mohon isi nama catatan atau barang belanjaan.');
+      Alert.alert(t('common_attention'), t('tx_modal_err_title'));
       return;
     }
     if (!selectedCategory) {
-      Alert.alert('Perhatian', 'Mohon pilih kategori transaksi.');
+      Alert.alert(t('common_attention'), t('tx_modal_err_category'));
       return;
     }
 
@@ -129,7 +131,7 @@ export default function AddTransactionModal() {
       router.back();
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', isEditing ? 'Gagal memperbarui transaksi.' : 'Gagal menyimpan transaksi.');
+      Alert.alert(t('common_error'), isEditing ? t('tx_modal_err_update') : t('tx_modal_err_save'));
     }
   };
 
@@ -142,7 +144,7 @@ export default function AddTransactionModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>{isEditing ? 'Edit Transaksi' : 'Catat Transaksi'}</Text>
+        <Text style={styles.headerTitle}>{isEditing ? t('tx_modal_edit_title') : t('tx_modal_add_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -177,7 +179,7 @@ export default function AddTransactionModal() {
               color={type === 'expense' ? colors.expenseDark : colors.textSecondary}
             />
             <Text style={[styles.typeText, type === 'expense' && styles.typeTextActiveExpense]}>
-              Pengeluaran
+              {t('common_expense')}
             </Text>
           </Pressable>
 
@@ -190,14 +192,14 @@ export default function AddTransactionModal() {
               color={type === 'income' ? colors.incomeDark : colors.textSecondary}
             />
             <Text style={[styles.typeText, type === 'income' && styles.typeTextActiveIncome]}>
-              Pemasukan
+              {t('common_income')}
             </Text>
           </Pressable>
         </View>
 
         {/* Amount Input */}
         <View style={styles.amountCard}>
-          <Text style={styles.inputLabel}>Nominal Uang</Text>
+          <Text style={styles.inputLabel}>{t('tx_modal_amount_label')}</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
             <TextInput
@@ -217,14 +219,14 @@ export default function AddTransactionModal() {
           <View style={styles.inputSection}>
             <View style={styles.categoryHeader}>
               <Text style={styles.sectionTitle}>
-                {type === 'expense' ? 'Bayar Pakai Dompet' : 'Masuk ke Dompet'}
+                {type === 'expense' ? t('tx_modal_wallet_pay') : t('tx_modal_wallet_receive')}
               </Text>
               <Pressable
                 onPress={() => router.push('/modal/wallets')}
                 hitSlop={8}
                 style={styles.addCategoryBtn}>
                 <Ionicons name="wallet-outline" size={15} color={colors.primary} />
-                <Text style={styles.addCategoryText}>Kelola Dompet</Text>
+                <Text style={styles.addCategoryText}>{t('tx_modal_wallet_manage')}</Text>
               </Pressable>
             </View>
 
@@ -267,14 +269,14 @@ export default function AddTransactionModal() {
         {/* Title / Item Name */}
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>
-            {type === 'expense' ? 'Barang yang Dibeli' : 'Sumber Pemasukan'}
+            {type === 'expense' ? t('tx_modal_item_expense') : t('tx_modal_item_income')}
           </Text>
           <TextInput
             style={styles.textInput}
             placeholder={
               type === 'expense'
-                ? 'Contoh: Nasi Padang, Beli Baju, Bensin'
-                : 'Contoh: Gaji Bulanan, Jual Baju Bekas'
+                ? t('tx_modal_placeholder_expense')
+                : t('tx_modal_placeholder_income')
             }
             placeholderTextColor={colors.textMuted}
             value={title}
@@ -285,13 +287,13 @@ export default function AddTransactionModal() {
         {/* Category Selector */}
         <View style={styles.inputSection}>
           <View style={styles.categoryHeader}>
-            <Text style={styles.sectionTitle}>Pilih Kategori</Text>
+            <Text style={styles.sectionTitle}>{t('tx_modal_select_category')}</Text>
             <Pressable
               onPress={() => router.push('/modal/add-category')}
               hitSlop={8}
               style={styles.addCategoryBtn}>
               <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-              <Text style={styles.addCategoryText}>Tambah Baru</Text>
+              <Text style={styles.addCategoryText}>{t('tx_modal_add_category')}</Text>
             </Pressable>
           </View>
 
@@ -316,7 +318,7 @@ export default function AddTransactionModal() {
                       styles.categoryChipText,
                       isSelected && { color: cat.color, fontWeight: '700' },
                     ]}>
-                    {cat.name}
+                    {getCategoryName(cat)}
                   </Text>
                 </Pressable>
               );
@@ -326,7 +328,7 @@ export default function AddTransactionModal() {
 
         {/* Date Selector */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Tanggal Transaksi (YYYY-MM-DD)</Text>
+          <Text style={styles.sectionTitle}>{t('tx_modal_date_label')}</Text>
           <View style={styles.dateRow}>
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
@@ -338,17 +340,17 @@ export default function AddTransactionModal() {
             <Pressable
               style={styles.todayBtn}
               onPress={() => setDate(getTodayISO())}>
-              <Text style={styles.todayBtnText}>Hari Ini</Text>
+              <Text style={styles.todayBtnText}>{t('common_today')}</Text>
             </Pressable>
           </View>
         </View>
 
         {/* Notes */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionTitle}>Catatan Tambahan (Opsional)</Text>
+          <Text style={styles.sectionTitle}>{t('common_notes_optional')}</Text>
           <TextInput
             style={[styles.textInput, styles.textArea]}
-            placeholder="Catatan kecil tentang belanjaan ini..."
+            placeholder={t('tx_modal_notes_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={notes}
             onChangeText={setNotes}
@@ -363,7 +365,7 @@ export default function AddTransactionModal() {
           onPress={handleSubmit}>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
           <Text style={styles.submitBtnText}>
-            {isEditing ? 'Simpan Perubahan' : 'Simpan Transaksi'}
+            {isEditing ? t('tx_modal_save_edit') : t('tx_modal_save_add')}
           </Text>
         </Pressable>
       </ScrollView>

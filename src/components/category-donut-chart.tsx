@@ -4,6 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
+import { useI18n } from '@/i18n';
 
 interface CategoryBreakdownItem {
   categoryId: string;
@@ -20,6 +21,8 @@ interface CategoryDonutChartProps {
 }
 
 export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartProps) {
+  const { t } = useI18n();
+
   // Defensive checks
   const safeData = Array.isArray(data) ? data : [];
   const safeTotal = typeof totalExpense === 'number' && !isNaN(totalExpense) ? totalExpense : 0;
@@ -27,10 +30,10 @@ export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartPro
   if (safeData.length === 0 || safeTotal <= 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Kategori Pengeluaran</Text>
+        <Text style={styles.title}>{t('analytics_category_title')}</Text>
         <View style={styles.emptyContainer}>
           <Ionicons name="pie-chart-outline" size={36} color={colors.textMuted} />
-          <Text style={styles.emptyText}>Belum ada pengeluaran yang dicatat</Text>
+          <Text style={styles.emptyText}>{t('chart_no_expense')}</Text>
         </View>
       </View>
     );
@@ -47,7 +50,7 @@ export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartPro
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Kategori Pengeluaran</Text>
+      <Text style={styles.title}>{t('analytics_category_title')}</Text>
 
       {/* Donut Chart Visualizer with safe numbers & RN transform */}
       <View style={styles.chartAndCenter}>
@@ -94,9 +97,9 @@ export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartPro
 
           {/* Center text overlay */}
           <View style={styles.donutCenter}>
-            <Text style={styles.centerLabel}>Total</Text>
+            <Text style={styles.centerLabel}>{t('common_all')}</Text>
             <Text style={styles.centerValue} numberOfLines={1}>
-              {safeData.length} Kategori
+              {t('chart_category_count', { count: safeData.length })}
             </Text>
           </View>
         </View>

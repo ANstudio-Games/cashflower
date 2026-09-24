@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useI18n, LANGUAGES, Language } from '@/i18n';
 import { colors } from '@/theme/colors';
 import { scheduleDailyReminder, cancelDailyReminder } from '@/utils/notifications';
 
@@ -32,6 +33,7 @@ export default function SettingsModal() {
     isMultiWalletEnabled,
     setMultiWalletEnabled,
   } = useFinance();
+  const { language, setLanguage, t } = useI18n();
 
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
   const [debtReminderEnabled, setDebtReminderEnabled] = useState(true);
@@ -41,9 +43,9 @@ export default function SettingsModal() {
   const handleBackup = async () => {
     try {
       setIsBackingUp(true);
-      await backupData();
+      await backupData(t('backup_dialog_title'));
     } catch (err: any) {
-      Alert.alert('Gagal Cadangkan', err.message || 'Terjadi kesalahan saat mencadangkan data.');
+      Alert.alert(t('settings_backup_err_title'), err.message || t('settings_backup_err_msg'));
     } finally {
       setIsBackingUp(false);
     }
@@ -51,21 +53,24 @@ export default function SettingsModal() {
 
   const handleRestore = async () => {
     Alert.alert(
-      'Konfirmasi Pemulihan Data',
-      'Memulihkan data akan menggantikan data saat ini dengan data dari file cadangan. Lanjutkan?',
+      t('settings_restore_confirm_title'),
+      t('settings_restore_confirm_msg'),
       [
-        { text: 'Batal', style: 'cancel' },
+        { text: t('common_cancel'), style: 'cancel' },
         {
-          text: 'Pilih File & Pulihkan',
+          text: t('settings_restore_btn'),
           onPress: async () => {
             try {
               setIsRestoring(true);
               const restoredCount = await restoreData();
               if (restoredCount > 0) {
-                Alert.alert('Berhasil Dipulihkan', `Berhasil memulihkan ${restoredCount} transaksi.`);
+                Alert.alert(
+                  t('settings_restore_success_title'),
+                  t('settings_restore_success_msg', { count: restoredCount })
+                );
               }
             } catch (err: any) {
-              Alert.alert('Gagal Memulihkan', err.message || 'Format file cadangan tidak sesuai.');
+              Alert.alert(t('settings_restore_err_title'), err.message || t('settings_restore_err_msg'));
             } finally {
               setIsRestoring(false);
             }
@@ -78,8 +83,8 @@ export default function SettingsModal() {
   const toggleDailyReminder = async (val: boolean) => {
     setDailyReminderEnabled(val);
     if (val) {
-      await scheduleDailyReminder(20, 0);
-      Alert.alert('Pengingat Aktif', 'Notifikasi harian akan muncul setiap jam 20:00.');
+      await scheduleDailyReminder(20, 0, language);
+      Alert.alert(t('settings_reminder_active'), t('settings_reminder_daily_alert'));
     } else {
       await cancelDailyReminder();
     }
@@ -92,13 +97,50 @@ export default function SettingsModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Pengaturan & Cadangan</Text>
+        <Text style={styles.headerTitle}>{t('settings_header_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Section: Language Selection */}
+        <Text style={styles.sectionHeader}>{t('settings_language_section')}</Text>
+        <View style={styles.cardGroup}>
+          {LANGUAGES.map((langItem, idx) => {
+            const isSelected = language === langItem.code;
+            return (
+              <React.Fragment key={langItem.code}>
+                {idx > 0 && <View style={styles.rowDivider} />}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    isSelected && styles.languageRowSelected,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                  onPress={() => setLanguage(langItem.code)}>
+                  <View style={[styles.flagWrap, isSelected && styles.flagWrapSelected]}>
+                    <Text style={styles.flagEmoji}>{langItem.flag}</Text>
+                  </View>
+                  <View style={styles.actionInfo}>
+                    <Text style={[styles.actionTitle, isSelected && styles.languageTextSelected]}>
+                      {langItem.nativeLabel}
+                    </Text>
+                    <Text style={styles.actionDesc}>{langItem.label}</Text>
+                  </View>
+                  {isSelected ? (
+                    <View style={styles.checkCircle}>
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                    </View>
+                  ) : (
+                    <View style={styles.uncheckCircle} />
+                  )}
+                </Pressable>
+              </React.Fragment>
+            );
+          })}
+        </View>
+
         {/* Section: Cadangan & Google Drive */}
-        <Text style={styles.sectionHeader}>CADANGAN & CLOUD</Text>
+        <Text style={styles.sectionHeader}>{t('settings_cloud_section')}</Text>
         <View style={styles.cardGroup}>
           <Pressable
             style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}
@@ -108,9 +150,9 @@ export default function SettingsModal() {
               <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Cadangkan ke Google Drive / File</Text>
+              <Text style={styles.actionTitle}>{t('settings_backup_title')}</Text>
               <Text style={styles.actionDesc}>
-                {isBackingUp ? 'Sedang mengekspor data...' : 'Simpan cadangan data keuangan Anda ke Google Drive'}
+                {isBackingUp ? t('settings_backup_running') : t('settings_backup_desc')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -126,9 +168,9 @@ export default function SettingsModal() {
               <Ionicons name="cloud-download-outline" size={20} color={colors.info} />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Pulihkan Data dari Cadangan</Text>
+              <Text style={styles.actionTitle}>{t('settings_restore_title')}</Text>
               <Text style={styles.actionDesc}>
-                {isRestoring ? 'Memproses pemulihan...' : 'Pilih file cadangan (.json) dari Google Drive / HP'}
+                {isRestoring ? t('settings_restore_running') : t('settings_restore_desc')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -136,7 +178,7 @@ export default function SettingsModal() {
         </View>
 
         {/* Section: Ekspor Laporan */}
-        <Text style={styles.sectionHeader}>LAPORAN & DOKUMEN</Text>
+        <Text style={styles.sectionHeader}>{t('settings_report_section')}</Text>
         <View style={styles.cardGroup}>
           <Pressable
             style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}
@@ -145,8 +187,8 @@ export default function SettingsModal() {
               <Ionicons name="document-text-outline" size={20} color="#DC2626" />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Ekspor Laporan Keuangan</Text>
-              <Text style={styles.actionDesc}>Cetak PDF resmi atau simpan spreadsheet Excel/CSV</Text>
+              <Text style={styles.actionTitle}>{t('settings_export_title')}</Text>
+              <Text style={styles.actionDesc}>{t('settings_export_desc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
@@ -162,8 +204,8 @@ export default function SettingsModal() {
               <Ionicons name="star-outline" size={20} color="#F59E0B" />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Target Pembelian & Rencana</Text>
-              <Text style={styles.actionDesc}>Wishlist barang impian & progres saldo kas</Text>
+              <Text style={styles.actionTitle}>{t('settings_plans_title')}</Text>
+              <Text style={styles.actionDesc}>{t('settings_plans_desc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
@@ -177,23 +219,23 @@ export default function SettingsModal() {
               <Ionicons name="pie-chart-outline" size={20} color={colors.warning} />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Atur Target Budgeting</Text>
-              <Text style={styles.actionDesc}>Batas pengeluaran bulanan global & per kategori</Text>
+              <Text style={styles.actionTitle}>{t('settings_budget_title')}</Text>
+              <Text style={styles.actionDesc}>{t('settings_budget_desc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </Pressable>
         </View>
 
         {/* Section: Pengingat Otomatis */}
-        <Text style={styles.sectionHeader}>PENGINGAT OTOMATIS</Text>
+        <Text style={styles.sectionHeader}>{t('settings_reminder_section')}</Text>
         <View style={styles.cardGroup}>
           <View style={styles.actionRow}>
             <View style={[styles.iconWrap, { backgroundColor: colors.incomeSoft }]}>
               <Ionicons name="notifications-outline" size={20} color={colors.income} />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Pengingat Catat Belanjaan</Text>
-              <Text style={styles.actionDesc}>Notifikasi ramah setiap jam 20:00 malam</Text>
+              <Text style={styles.actionTitle}>{t('settings_reminder_daily_title')}</Text>
+              <Text style={styles.actionDesc}>{t('settings_reminder_daily_desc')}</Text>
             </View>
             <Switch
               value={dailyReminderEnabled}
@@ -210,8 +252,8 @@ export default function SettingsModal() {
               <Ionicons name="alarm-outline" size={20} color={colors.receivable} />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Pengingat Jatuh Tempo Hutang</Text>
-              <Text style={styles.actionDesc}>Peringatan otomatis saat tagihan pinjaman tiba</Text>
+              <Text style={styles.actionTitle}>{t('settings_reminder_debt_title')}</Text>
+              <Text style={styles.actionDesc}>{t('settings_reminder_debt_desc')}</Text>
             </View>
             <Switch
               value={debtReminderEnabled}
@@ -223,7 +265,7 @@ export default function SettingsModal() {
         </View>
 
         {/* Section: Dompet & Akun Keuangan */}
-        <Text style={styles.sectionHeader}>DOMPET & TEMPAT SIMPAN UANG</Text>
+        <Text style={styles.sectionHeader}>{t('settings_wallet_section')}</Text>
         <View style={styles.cardGroup}>
           <View style={styles.actionRow}>
             <View
@@ -238,11 +280,11 @@ export default function SettingsModal() {
               />
             </View>
             <View style={styles.actionInfo}>
-              <Text style={styles.actionTitle}>Fitur Multi-Dompet</Text>
+              <Text style={styles.actionTitle}>{t('settings_wallet_toggle_title')}</Text>
               <Text style={styles.actionDesc}>
                 {isMultiWalletEnabled
-                  ? 'Aktif: Pisahkan saldo ke tunai, bank, & e-wallet'
-                  : 'Nonaktif: Menggunakan 1 saldo utama (klasik)'}
+                  ? t('settings_wallet_toggle_on')
+                  : t('settings_wallet_toggle_off')}
               </Text>
             </View>
             <Switch
@@ -266,9 +308,9 @@ export default function SettingsModal() {
                   <Ionicons name="options-outline" size={20} color={colors.primary} />
                 </View>
                 <View style={styles.actionInfo}>
-                  <Text style={styles.actionTitle}>Kelola Dompet & Rekening</Text>
+                  <Text style={styles.actionTitle}>{t('settings_wallet_manage_title')}</Text>
                   <Text style={styles.actionDesc}>
-                    Atur uang tunai, bank, dan e-wallet ({wallets.length} dompet aktif)
+                    {t('settings_wallet_manage_desc', { count: wallets.length })}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -283,8 +325,8 @@ export default function SettingsModal() {
                   <Ionicons name="swap-horizontal-outline" size={20} color="#6366F1" />
                 </View>
                 <View style={styles.actionInfo}>
-                  <Text style={styles.actionTitle}>Transfer Antar Dompet</Text>
-                  <Text style={styles.actionDesc}>Pindahkan saldo antar rekening, tunai, atau e-wallet</Text>
+                  <Text style={styles.actionTitle}>{t('settings_wallet_transfer_title')}</Text>
+                  <Text style={styles.actionDesc}>{t('settings_wallet_transfer_desc')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </Pressable>
@@ -293,35 +335,35 @@ export default function SettingsModal() {
         </View>
 
         {/* Section: Ringkasan Database Lokal */}
-        <Text style={styles.sectionHeader}>STATUS PENYIMPANAN LOKAL</Text>
+        <Text style={styles.sectionHeader}>{t('settings_storage_section')}</Text>
         <View style={styles.cardGroup}>
           {isMultiWalletEnabled && (
             <>
               <View style={styles.statsRow}>
-                <Text style={styles.statsLabel}>Total Dompet & Rekening</Text>
-                <Text style={styles.statsVal}>{wallets.length} tempat</Text>
+                <Text style={styles.statsLabel}>{t('settings_stat_wallets')}</Text>
+                <Text style={styles.statsVal}>{t('common_data_count', { count: wallets.length })}</Text>
               </View>
               <View style={styles.rowDivider} />
             </>
           )}
           <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Total Transaksi</Text>
-            <Text style={styles.statsVal}>{transactions.length} data</Text>
+            <Text style={styles.statsLabel}>{t('settings_stat_transactions')}</Text>
+            <Text style={styles.statsVal}>{t('common_data_count', { count: transactions.length })}</Text>
           </View>
           <View style={styles.rowDivider} />
           <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Total Catatan Pinjaman</Text>
-            <Text style={styles.statsVal}>{debts.length} data</Text>
+            <Text style={styles.statsLabel}>{t('settings_stat_debts')}</Text>
+            <Text style={styles.statsVal}>{t('common_data_count', { count: debts.length })}</Text>
           </View>
           <View style={styles.rowDivider} />
           <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Total Catatan Trading</Text>
-            <Text style={styles.statsVal}>{investments.length} data</Text>
+            <Text style={styles.statsLabel}>{t('settings_stat_trades')}</Text>
+            <Text style={styles.statsVal}>{t('common_data_count', { count: investments.length })}</Text>
           </View>
           <View style={styles.rowDivider} />
           <View style={styles.statsRow}>
-            <Text style={styles.statsLabel}>Total Target Rencana</Text>
-            <Text style={styles.statsVal}>{plans.length} data</Text>
+            <Text style={styles.statsLabel}>{t('settings_stat_plans')}</Text>
+            <Text style={styles.statsVal}>{t('common_data_count', { count: plans.length })}</Text>
           </View>
         </View>
 
@@ -387,6 +429,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     gap: 12,
+  },
+  languageRowSelected: {
+    backgroundColor: `${colors.primary}08`,
+  },
+  flagWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceHover,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  flagWrapSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  flagEmoji: {
+    fontSize: 20,
+  },
+  languageTextSelected: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uncheckCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   iconWrap: {
     width: 40,

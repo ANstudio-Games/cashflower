@@ -4,33 +4,35 @@ import { Ionicons } from '@expo/vector-icons';
 import { Investment } from '@/types';
 import { colors } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
-import { formatDateShort } from '@/utils/format-date';
+import { useI18n } from '@/i18n';
 
 interface InvestmentItemProps {
   item: Investment;
   onDelete: (id: string) => void;
 }
 
-const INSTRUMENT_MAP: Record<string, { label: string; icon: any; color: string }> = {
-  saham: { label: 'Saham', icon: 'business-outline', color: '#3B82F6' },
-  kripto: { label: 'Kripto', icon: 'logo-bitcoin', color: '#F59E0B' },
-  forex: { label: 'Forex', icon: 'swap-horizontal-outline', color: '#10B981' },
-  reksadana: { label: 'Reksa Dana', icon: 'pie-chart-outline', color: '#8B5CF6' },
-  emas: { label: 'Emas', icon: 'sparkles-outline', color: '#D97706' },
-  lainnya: { label: 'Lainnya', icon: 'stats-chart-outline', color: '#64748B' },
-};
-
 export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
   const isProfit = item.pnl >= 0;
-  const instrument = INSTRUMENT_MAP[item.instrument_type] || INSTRUMENT_MAP.lainnya;
+  const { t, formatDateShort } = useI18n();
+
+  const instrumentMap: Record<string, { label: string; icon: any; color: string }> = {
+    saham: { label: t('inst_saham'), icon: 'business-outline', color: '#3B82F6' },
+    kripto: { label: t('inst_kripto'), icon: 'logo-bitcoin', color: '#F59E0B' },
+    forex: { label: t('inst_forex'), icon: 'swap-horizontal-outline', color: '#10B981' },
+    reksadana: { label: t('inst_reksadana'), icon: 'pie-chart-outline', color: '#8B5CF6' },
+    emas: { label: t('inst_emas'), icon: 'sparkles-outline', color: '#D97706' },
+    lainnya: { label: t('inst_lainnya'), icon: 'stats-chart-outline', color: '#64748B' },
+  };
+
+  const instrument = instrumentMap[item.instrument_type] || instrumentMap.lainnya;
 
   const handleDelete = () => {
     Alert.alert(
-      'Hapus Catatan Trading',
-      `Hapus catatan aset "${item.asset_name}"?`,
+      t('inv_delete_title'),
+      t('inv_delete_msg', { asset: item.asset_name }),
       [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Hapus', style: 'destructive', onPress: () => onDelete(item.id) },
+        { text: t('common_cancel'), style: 'cancel' },
+        { text: t('common_delete'), style: 'destructive', onPress: () => onDelete(item.id) },
       ]
     );
   };
@@ -72,11 +74,11 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
 
         <View style={styles.priceCol}>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Beli: </Text>
+            <Text style={styles.priceLabel}>{t('inv_buy_label')}</Text>
             <Text style={styles.priceValue}>{formatCurrency(item.buy_price)}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Jual: </Text>
+            <Text style={styles.priceLabel}>{t('inv_sell_label')}</Text>
             <Text style={styles.priceValue}>{formatCurrency(item.sell_price)}</Text>
           </View>
         </View>
@@ -85,7 +87,7 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
       {/* Footer Notes & Delete */}
       <View style={styles.footerRow}>
         <Text style={styles.notes} numberOfLines={1}>
-          {item.notes ? item.notes : 'Tidak ada catatan strategi'}
+          {item.notes ? item.notes : t('inv_no_notes')}
         </Text>
         <Pressable
           hitSlop={8}

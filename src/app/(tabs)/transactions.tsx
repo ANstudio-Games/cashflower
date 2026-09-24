@@ -15,10 +15,12 @@ import { useFinance } from '@/context/finance-context';
 import { TransactionItem } from '@/components/transaction-item';
 import { EmptyState } from '@/components/empty-state';
 import { colors } from '@/theme/colors';
+import { useI18n } from '@/i18n';
 
 export default function TransactionsScreen() {
   const router = useRouter();
   const { transactions, categories, wallets, deleteTransactionById, isMultiWalletEnabled } = useFinance();
+  const { t, getCategoryName } = useI18n();
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
@@ -64,9 +66,9 @@ export default function TransactionsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Riwayat Transaksi</Text>
+          <Text style={styles.headerTitle}>{t('tx_header_title')}</Text>
           <Text style={styles.headerSubtitle}>
-            {filteredTransactions.length} dari {transactions.length} transaksi tercatat
+            {t('tx_header_subtitle', { filtered: filteredTransactions.length, total: transactions.length })}
           </Text>
         </View>
         <View style={styles.headerRightActions}>
@@ -93,7 +95,7 @@ export default function TransactionsScreen() {
         <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Cari belanjaan, nama barang..."
+          placeholder={t('tx_search_placeholder')}
           placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
@@ -113,7 +115,7 @@ export default function TransactionsScreen() {
           <Text
             style={[styles.typeTabText, typeFilter === 'all' && styles.typeTabTextActive]}
             numberOfLines={1}>
-            Semua
+            {t('common_all')}
           </Text>
         </Pressable>
         <Pressable
@@ -127,7 +129,7 @@ export default function TransactionsScreen() {
           <Text
             style={[styles.typeTabText, typeFilter === 'expense' && styles.typeTabTextActiveExpense]}
             numberOfLines={1}>
-            Pengeluaran
+            {t('common_expense')}
           </Text>
         </Pressable>
         <Pressable
@@ -141,7 +143,7 @@ export default function TransactionsScreen() {
           <Text
             style={[styles.typeTabText, typeFilter === 'income' && styles.typeTabTextActiveIncome]}
             numberOfLines={1}>
-            Pemasukan
+            {t('common_income')}
           </Text>
         </Pressable>
         {isMultiWalletEnabled && (
@@ -221,7 +223,7 @@ export default function TransactionsScreen() {
             style={[styles.catChip, categoryFilter === 'all' && styles.catChipActive]}
             onPress={() => setCategoryFilter('all')}>
             <Text style={[styles.catChipText, categoryFilter === 'all' && styles.catChipTextActive]}>
-              Semua Kategori
+              {t('tx_all_categories')}
             </Text>
           </Pressable>
 
@@ -245,7 +247,7 @@ export default function TransactionsScreen() {
                     styles.catChipText,
                     isSelected && { color: cat.color, fontWeight: '700' },
                   ]}>
-                  {cat.name}
+                  {getCategoryName(cat)}
                 </Text>
               </Pressable>
             );
@@ -269,13 +271,13 @@ export default function TransactionsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="receipt-outline"
-            title="Tidak Ada Transaksi"
+            title={t('tx_empty_title')}
             description={
               search || typeFilter !== 'all' || categoryFilter !== 'all'
-                ? 'Tidak ada transaksi yang cocok dengan filter atau pencarian Anda.'
-                : 'Mulai catat barang belanjaan atau pemasukan uang Anda sekarang.'
+                ? t('tx_empty_desc_filtered')
+                : t('tx_empty_desc_empty')
             }
-            actionText="Catat Transaksi"
+            actionText={t('tx_record_action')}
             onActionPress={() => router.push('/modal/add-transaction')}
           />
         }

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Debt } from '@/types';
 import { colors } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
-import { formatDateShort } from '@/utils/format-date';
+import { useI18n } from '@/i18n';
 
 interface DebtItemProps {
   item: Debt;
@@ -15,26 +15,33 @@ interface DebtItemProps {
 export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
   const isReceivable = item.type === 'receivable'; // Orang pinjam ke user (user menagih)
   const isPaid = item.is_paid === 1;
+  const { t, formatDateShort } = useI18n();
 
   const handleDelete = () => {
     Alert.alert(
-      'Hapus Catatan',
-      `Hapus catatan ${isReceivable ? 'piutang' : 'hutang'} "${item.person_name}"?`,
+      t('debt_delete_title'),
+      t('debt_delete_msg', {
+        type: isReceivable ? t('common_receivable') : t('common_payable'),
+        person: item.person_name,
+      }),
       [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Hapus', style: 'destructive', onPress: () => onDelete(item.id) },
+        { text: t('common_cancel'), style: 'cancel' },
+        { text: t('common_delete'), style: 'destructive', onPress: () => onDelete(item.id) },
       ]
     );
   };
 
   const handleToggle = () => {
     Alert.alert(
-      isPaid ? 'Ubah Status ke Belum Lunas?' : 'Tandai Sudah Lunas?',
-      `Ubah status pembayaran untuk ${item.person_name} sebesar ${formatCurrency(item.amount)}?`,
+      isPaid ? t('debt_toggle_title_settled') : t('debt_toggle_title_unsettled'),
+      t('debt_toggle_msg', {
+        person: item.person_name,
+        amount: formatCurrency(item.amount),
+      }),
       [
-        { text: 'Batal', style: 'cancel' },
+        { text: t('common_cancel'), style: 'cancel' },
         {
-          text: isPaid ? 'Tandai Belum Lunas' : 'Ya, Sudah Lunas',
+          text: isPaid ? t('debt_toggle_btn_unsettled') : t('debt_toggle_btn_settled'),
           onPress: () => onTogglePaid(item.id, !isPaid),
         },
       ]
@@ -61,7 +68,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
             color={themeColor}
           />
           <Text style={[styles.badgeText, { color: themeColor }]}>
-            {isReceivable ? 'Piutang (Tagih)' : 'Hutang (Bayar)'}
+            {isReceivable ? t('debt_item_badge_receivable') : t('debt_item_badge_payable')}
           </Text>
         </View>
 
@@ -79,7 +86,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
             color={isPaid ? colors.incomeDark : colors.textSecondary}
           />
           <Text style={[styles.statusText, isPaid ? styles.statusTextPaid : styles.statusTextUnpaid]}>
-            {isPaid ? 'Lunas' : 'Belum Lunas'}
+            {isPaid ? t('debt_status_settled') : t('debt_status_unsettled')}
           </Text>
         </Pressable>
       </View>
@@ -103,16 +110,17 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
       </View>
 
       {/* Dates & Actions footer */}
-      <View style={styles.footerRow}>
-        <View style={styles.dateCol}>
-          <Text style={styles.dateLabel}>Pinjam: {formatDateShort(item.issue_date)}</Text>
-          {item.due_date ? (
-            <Text style={[styles.dateLabel, isOverdue && styles.overdueText]}>
-              {isOverdue ? '⚠️ Lewat Tempo: ' : 'Jatuh Tempo: '}
-              {formatDateShort(item.due_date)}
-            </Text>
-          ) : null}
-        </View>
+        <View style={styles.footerRow}>
+          <View style={styles.dateCol}>
+            <Text style={styles.dateLabel}>{t('debt_borrow_date', { date: formatDateShort(item.issue_date) })}</Text>
+            {item.due_date ? (
+              <Text style={[styles.dateLabel, isOverdue && styles.overdueText]}>
+                {isOverdue
+                  ? t('debt_overdue', { date: formatDateShort(item.due_date) })
+                  : t('debt_due_date', { date: formatDateShort(item.due_date) })}
+              </Text>
+            ) : null}
+          </View>
 
         <View style={styles.actionButtons}>
           <Pressable

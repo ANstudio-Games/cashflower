@@ -4,9 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
+import { useI18n } from '@/i18n';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
 
   // Pastikan ada ruang yang cukup di bawah agar tidak terhalang tombol navigasi Android (Back, Home, Recents)
   const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 20 : 16);
@@ -45,7 +47,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Beranda',
+          title: t('tab_home'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
           ),
@@ -54,7 +56,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="transactions"
         options={{
-          title: 'Transaksi',
+          title: t('tab_transactions'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={22} color={color} />
           ),
@@ -63,7 +65,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          title: 'Grafik',
+          title: t('tab_analytics'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'pie-chart' : 'pie-chart-outline'} size={22} color={color} />
           ),
@@ -72,7 +74,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="debts"
         options={{
-          title: 'Hutang',
+          title: t('tab_debts'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
           ),
@@ -81,7 +83,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="investments"
         options={{
-          title: 'Investasi',
+          title: t('tab_investments'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} size={22} color={color} />
           ),
