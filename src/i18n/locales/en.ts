@@ -30,6 +30,9 @@ export const en: TranslationDictionary = {
   common_notes_optional: 'Additional Notes (Optional)',
   common_data_count: '{count} records',
   common_others: 'Others',
+  common_export: 'Export',
+  common_transfer: 'Transfer',
+  common_all_wallets: 'All Wallets',
 
   // Default Categories
   cat_food: 'Food & Dining',

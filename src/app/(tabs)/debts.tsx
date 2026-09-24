@@ -8,12 +8,14 @@ import { DebtItem } from '@/components/debt-item';
 import { EmptyState } from '@/components/empty-state';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
+import { useI18n } from '@/i18n';
 
 type FilterType = 'all' | 'unpaid' | 'receivable' | 'payable' | 'paid';
 
 export default function DebtsScreen() {
   const router = useRouter();
   const { debts, debtSummary, toggleDebtStatus, deleteDebtById } = useFinance();
+  const { t } = useI18n();
 
   const [filter, setFilter] = useState<FilterType>('unpaid');
 
@@ -32,8 +34,8 @@ export default function DebtsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Hutang & Piutang</Text>
-          <Text style={styles.headerSubtitle}>Kelola pinjaman dan penagihan uang</Text>
+          <Text style={styles.headerTitle}>{t('debt_header_title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('debt_header_subtitle')}</Text>
         </View>
 
         <Pressable
@@ -51,9 +53,9 @@ export default function DebtsScreen() {
             <View style={[styles.iconWrap, { backgroundColor: colors.receivableSoft }]}>
               <Ionicons name="arrow-forward-circle" size={16} color={colors.receivable} />
             </View>
-            <Text style={styles.cardTag}>Piutang</Text>
+            <Text style={styles.cardTag}>{t('debt_receivable_card_tag')}</Text>
           </View>
-          <Text style={styles.cardLabel}>Uang di Orang (Tagih)</Text>
+          <Text style={styles.cardLabel}>{t('debt_receivable_card_label')}</Text>
           <Text style={[styles.cardValue, { color: colors.receivableDark }]}>
             {formatCurrency(debtSummary.totalReceivable)}
           </Text>
@@ -65,9 +67,9 @@ export default function DebtsScreen() {
             <View style={[styles.iconWrap, { backgroundColor: colors.debtSoft }]}>
               <Ionicons name="arrow-back-circle" size={16} color={colors.debt} />
             </View>
-            <Text style={styles.cardTag}>Hutang</Text>
+            <Text style={styles.cardTag}>{t('debt_payable_card_tag')}</Text>
           </View>
-          <Text style={styles.cardLabel}>Harus Dibayar</Text>
+          <Text style={styles.cardLabel}>{t('debt_payable_card_label')}</Text>
           <Text style={[styles.cardValue, { color: colors.debtDark }]}>
             {formatCurrency(debtSummary.totalPayable)}
           </Text>
@@ -80,35 +82,35 @@ export default function DebtsScreen() {
           style={[styles.filterChip, filter === 'unpaid' && styles.filterChipActive]}
           onPress={() => setFilter('unpaid')}>
           <Text style={[styles.filterText, filter === 'unpaid' && styles.filterTextActive]}>
-            Belum Lunas ({debtSummary.unpaidCount})
+            {t('debt_filter_unpaid', { count: debtSummary.unpaidCount })}
           </Text>
         </Pressable>
         <Pressable
           style={[styles.filterChip, filter === 'receivable' && styles.filterChipActive]}
           onPress={() => setFilter('receivable')}>
           <Text style={[styles.filterText, filter === 'receivable' && styles.filterTextActive]}>
-            Piutang Saja
+            {t('debt_filter_receivable')}
           </Text>
         </Pressable>
         <Pressable
           style={[styles.filterChip, filter === 'payable' && styles.filterChipActive]}
           onPress={() => setFilter('payable')}>
           <Text style={[styles.filterText, filter === 'payable' && styles.filterTextActive]}>
-            Hutang Saja
+            {t('debt_filter_payable')}
           </Text>
         </Pressable>
         <Pressable
           style={[styles.filterChip, filter === 'paid' && styles.filterChipActive]}
           onPress={() => setFilter('paid')}>
           <Text style={[styles.filterText, filter === 'paid' && styles.filterTextActive]}>
-            Lunas
+            {t('debt_filter_paid')}
           </Text>
         </Pressable>
         <Pressable
           style={[styles.filterChip, filter === 'all' && styles.filterChipActive]}
           onPress={() => setFilter('all')}>
           <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-            Semua
+            {t('common_all')}
           </Text>
         </Pressable>
       </View>
@@ -128,13 +130,13 @@ export default function DebtsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="people-outline"
-            title="Tidak Ada Catatan"
+            title={t('debt_empty_title')}
             description={
               filter === 'unpaid'
-                ? 'Semua hutang & piutang telah lunas! Tidak ada tagihan aktif saat ini.'
-                : 'Belum ada catatan pinjaman yang sesuai filter.'
+                ? t('debt_empty_unpaid_desc')
+                : t('debt_empty_filter_desc')
             }
-            actionText="Catat Hutang / Piutang"
+            actionText={t('debt_record_action')}
             onActionPress={() => router.push('/modal/add-debt')}
           />
         }

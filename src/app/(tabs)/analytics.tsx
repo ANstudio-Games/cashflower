@@ -8,10 +8,11 @@ import { CashflowBarChart } from '@/components/cashflow-bar-chart';
 import { CategoryDonutChart } from '@/components/category-donut-chart';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
+import { useI18n } from '@/i18n';
 
 // Error boundary to prevent any chart error from crashing the entire app
-class ChartErrorBoundary extends Component<{ children: ReactNode; title: string }, { hasError: boolean }> {
-  constructor(props: { children: ReactNode; title: string }) {
+class ChartErrorBoundary extends Component<{ children: ReactNode; title: string; fallbackText?: string }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; title: string; fallbackText?: string }) {
     super(props);
     this.state = { hasError: false };
   }
@@ -29,7 +30,9 @@ class ChartErrorBoundary extends Component<{ children: ReactNode; title: string 
       return (
         <View style={styles.errorCard}>
           <Ionicons name="alert-circle-outline" size={24} color={colors.warning} />
-          <Text style={styles.errorText}>Grafik sementara tidak dapat ditampilkan.</Text>
+          <Text style={styles.errorText}>
+            {this.props.fallbackText || 'Grafik sementara tidak dapat ditampilkan.'}
+          </Text>
         </View>
       );
     }
@@ -40,6 +43,7 @@ class ChartErrorBoundary extends Component<{ children: ReactNode; title: string 
 export default function AnalyticsScreen() {
   const router = useRouter();
   const { transactions, categories, cashflowSummary } = useFinance();
+  const { t, getCategoryName } = useI18n();
 
   // Safe category breakdown calculation
   const categoryBreakdown = useMemo(() => {
@@ -60,7 +64,7 @@ export default function AnalyticsScreen() {
       const cat = safeCats.find((c) => c.id === catId);
       return {
         categoryId: catId,
-        name: cat?.name || 'Lainnya',
+        name: getCategoryName(cat) || t('common_others'),
         color: cat?.color || colors.expense,
         icon: cat?.icon || 'grid-outline',
         total: amount,
@@ -70,7 +74,7 @@ export default function AnalyticsScreen() {
 
     items.sort((a, b) => b.total - a.total);
     return items;
-  }, [transactions, categories]);
+  }, [transactions, categories, getCategoryName, t]);
 
   // Safe savings rate calculation
   const savingsRate = useMemo(() => {
@@ -87,14 +91,14 @@ export default function AnalyticsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Grafik & Analisis</Text>
-          <Text style={styles.headerSubtitle}>Visualisasi arus kas dan pola pengeluaran</Text>
+          <Text style={styles.headerTitle}>{t('analytics_title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('analytics_subtitle')}</Text>
         </View>
         <Pressable
           style={({ pressed }) => [styles.exportHeaderBtn, pressed && { opacity: 0.8 }]}
           onPress={() => router.push('/modal/export-report')}>
           <Ionicons name="document-text-outline" size={16} color={colors.primary} />
-          <Text style={styles.exportHeaderBtnText}>Ekspor</Text>
+          <Text style={styles.exportHeaderBtnText}>{t('common_export') || 'Export'}</Text>
         </Pressable>
       </View>
 
@@ -102,24 +106,24 @@ export default function AnalyticsScreen() {
         {/* KPI Cards Row */}
         <View style={styles.kpiRow}>
           <View style={[styles.kpiCard, shadowStyles.sm]}>
-            <Text style={styles.kpiLabel}>Total Masuk</Text>
+            <Text style={styles.kpiLabel}>{t('analytics_total_income')}</Text>
             <Text style={[styles.kpiValue, { color: colors.incomeDark }]}>
               {formatCurrency(cashflowSummary?.totalIncome || 0)}
             </Text>
             <View style={[styles.kpiPill, { backgroundColor: colors.incomeSoft }]}>
               <Ionicons name="arrow-down" size={12} color={colors.incomeDark} />
-              <Text style={[styles.kpiPillText, { color: colors.incomeDark }]}>Arus Masuk</Text>
+              <Text style={[styles.kpiPillText, { color: colors.incomeDark }]}>{t('analytics_inflow_pill')}</Text>
             </View>
           </View>
 
           <View style={[styles.kpiCard, shadowStyles.sm]}>
-            <Text style={styles.kpiLabel}>Total Belanja</Text>
+            <Text style={styles.kpiLabel}>{t('analytics_total_spent')}</Text>
             <Text style={[styles.kpiValue, { color: colors.expenseDark }]}>
               {formatCurrency(cashflowSummary?.totalExpense || 0)}
             </Text>
             <View style={[styles.kpiPill, { backgroundColor: colors.expenseSoft }]}>
               <Ionicons name="arrow-up" size={12} color={colors.expenseDark} />
-              <Text style={[styles.kpiPillText, { color: colors.expenseDark }]}>Pengeluaran</Text>
+              <Text style={[styles.kpiPillText, { color: colors.expenseDark }]}>{t('analytics_outflow_pill')}</Text>
             </View>
           </View>
         </View>
@@ -128,8 +132,8 @@ export default function AnalyticsScreen() {
         <View style={[styles.savingsCard, shadowStyles.sm]}>
           <View style={styles.savingsHeader}>
             <View>
-              <Text style={styles.savingsTitle}>Tingkat Penghematan</Text>
-              <Text style={styles.savingsSub}>Persentase sisa uang kas dari pemasukan</Text>
+              <Text style={styles.savingsTitle}>{t('analytics_savings_rate')}</Text>
+              <Text style={styles.savingsSub}>{t('analytics_savings_desc')}</Text>
             </View>
             <Text style={styles.savingsPercent}>{savingsRate.toFixed(1)}%</Text>
           </View>
@@ -141,18 +145,18 @@ export default function AnalyticsScreen() {
         {/* Section: Tren Waktu (Bar Chart) */}
         <View style={styles.sectionTitleRow}>
           <Ionicons name="stats-chart" size={18} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Tren Arus Kas (Waktu)</Text>
+          <Text style={styles.sectionTitle}>{t('analytics_trend_title')}</Text>
         </View>
-        <ChartErrorBoundary title="Tren Arus Kas">
+        <ChartErrorBoundary title="Tren Arus Kas" fallbackText={t('analytics_chart_error')}>
           <CashflowBarChart transactions={transactions} />
         </ChartErrorBoundary>
 
         {/* Section: Donut Chart Kategori */}
         <View style={styles.sectionTitleRow}>
           <Ionicons name="pie-chart" size={18} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Proporsi Kategori Belanja</Text>
+          <Text style={styles.sectionTitle}>{t('analytics_category_title')}</Text>
         </View>
-        <ChartErrorBoundary title="Kategori Pengeluaran">
+        <ChartErrorBoundary title="Kategori Pengeluaran" fallbackText={t('analytics_chart_error')}>
           <CategoryDonutChart
             data={categoryBreakdown}
             totalExpense={cashflowSummary?.totalExpense || 0}

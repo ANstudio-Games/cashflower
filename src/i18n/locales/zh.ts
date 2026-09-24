@@ -30,6 +30,9 @@ export const zh: TranslationDictionary = {
   common_notes_optional: '备注信息（可选）',
   common_data_count: '{count} 条数据',
   common_others: '其他',
+  common_export: '导出',
+  common_transfer: '转账',
+  common_all_wallets: '全部账户',
 
   // Default Categories
   cat_food: '餐饮美食',

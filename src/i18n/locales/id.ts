@@ -30,6 +30,9 @@ export const id: TranslationDictionary = {
   common_notes_optional: 'Catatan Tambahan (Opsional)',
   common_data_count: '{count} data',
   common_others: 'Lainnya',
+  common_export: 'Ekspor',
+  common_transfer: 'Transfer',
+  common_all_wallets: 'Semua Dompet',
 
   // Default Categories
   cat_food: 'Makanan & Minuman',
