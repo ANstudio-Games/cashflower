@@ -78,6 +78,8 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       destination_wallet_id TEXT,
       date TEXT NOT NULL,
       notes TEXT,
+      generated_kind TEXT,
+      source_plan_id TEXT,
       created_at INTEGER NOT NULL,
       FOREIGN KEY (category_id) REFERENCES categories (id)
     );
@@ -146,6 +148,22 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     if (!hasDestWalletId) {
       await db.execAsync('ALTER TABLE transactions ADD COLUMN destination_wallet_id TEXT;');
     }
+    const hasGeneratedKind = txTableInfo.some((col) => col.name === 'generated_kind');
+    if (!hasGeneratedKind) {
+      await db.execAsync('ALTER TABLE transactions ADD COLUMN generated_kind TEXT;');
+    }
+    const hasSourcePlanId = txTableInfo.some((col) => col.name === 'source_plan_id');
+    if (!hasSourcePlanId) {
+      await db.execAsync('ALTER TABLE transactions ADD COLUMN source_plan_id TEXT;');
+    }
+    await db.runAsync(
+      `UPDATE transactions
+       SET generated_kind = 'plan_purchase'
+       WHERE generated_kind IS NULL
+         AND type = 'expense'
+         AND title LIKE 'Beli: %'
+         AND (notes = 'Target impian tercapai.' OR notes LIKE 'Target impian tercapai. %')`
+    );
   } catch (migErr) {
     console.warn('Migration check warning:', migErr);
   }
@@ -294,9 +312,9 @@ export async function transferWalletFunds(
   const source = await db.getFirstAsync<Wallet>('SELECT * FROM wallets WHERE id = ?', [params.sourceWalletId]);
   const dest = await db.getFirstAsync<Wallet>('SELECT * FROM wallets WHERE id = ?', [params.destinationWalletId]);
 
-  const sourceName = source ? source.name : 'Dompet Asal';
-  const destName = dest ? dest.name : 'Dompet Tujuan';
-  const title = `Transfer: ${sourceName} ➔ ${destName}`;
+  const title = source && dest
+    ? `${source.name} ➔ ${dest.name}`
+    : `${params.sourceWalletId} ➔ ${params.destinationWalletId}`;
   const txId = 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
   await db.runAsync(
@@ -398,8 +416,8 @@ export async function addTransaction(
   item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>
 ): Promise<void> {
   await db.runAsync(
-    `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, generated_kind, source_plan_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       item.id,
       item.title,
@@ -410,6 +428,8 @@ export async function addTransaction(
       item.destination_wallet_id ?? null,
       item.date,
       item.notes ?? null,
+      item.generated_kind ?? null,
+      item.source_plan_id ?? null,
       item.created_at,
     ]
   );
@@ -420,8 +440,10 @@ export async function updateTransaction(
   item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>
 ): Promise<void> {
   await db.runAsync(
-    `UPDATE transactions 
-     SET title = ?, amount = ?, type = ?, category_id = ?, wallet_id = ?, destination_wallet_id = ?, date = ?, notes = ?
+    `UPDATE transactions
+     SET title = ?, amount = ?, type = ?, category_id = ?, wallet_id = ?, destination_wallet_id = ?, date = ?, notes = ?,
+         generated_kind = CASE WHEN ? = 'expense' THEN generated_kind ELSE NULL END,
+         source_plan_id = CASE WHEN ? = 'expense' THEN source_plan_id ELSE NULL END
      WHERE id = ?`,
     [
       item.title,
@@ -432,6 +454,8 @@ export async function updateTransaction(
       item.destination_wallet_id ?? null,
       item.date,
       item.notes ?? null,
+      item.type,
+      item.type,
       item.id,
     ]
   );
@@ -885,8 +909,8 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
     if (Array.isArray(backup.transactions)) {
       for (const t of backup.transactions) {
         await db.runAsync(
-          `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, generated_kind, source_plan_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             t.id,
             t.title,
@@ -897,6 +921,8 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
             t.destination_wallet_id ?? null,
             t.date,
             t.notes ?? null,
+            t.generated_kind ?? null,
+            t.source_plan_id ?? null,
             t.created_at || Date.now(),
           ]
         );

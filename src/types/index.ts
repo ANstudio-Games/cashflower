@@ -43,6 +43,8 @@ export interface Transaction {
   wallet_icon?: string;
   wallet_color?: string;
   destination_wallet_name?: string;
+  generated_kind?: 'plan_purchase' | null;
+  source_plan_id?: string | null;
 }
 
 export type DebtType = 'receivable' | 'payable'; 

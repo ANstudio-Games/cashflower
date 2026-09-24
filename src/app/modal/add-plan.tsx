@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useI18n } from '@/i18n';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
 
@@ -23,6 +24,7 @@ export default function AddPlanModal() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const isEditing = Boolean(params.id);
+  const { t, getCategoryName, language } = useI18n();
 
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
@@ -67,11 +69,11 @@ export default function AddPlanModal() {
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert('Perhatian', 'Mohon isi nama barang atau target rencana Anda.');
+      Alert.alert(t('common_attention'), t('plan_modal_err_title'));
       return;
     }
     if (parsedAmount <= 0) {
-      Alert.alert('Perhatian', 'Mohon masukkan target harga / nominal yang valid.');
+      Alert.alert(t('common_attention'), t('plan_modal_err_amount'));
       return;
     }
 
@@ -88,8 +90,8 @@ export default function AddPlanModal() {
           completed_at: existingPlan.completed_at ?? null,
           notes: notes.trim() || null,
         });
-        Alert.alert('Berhasil', 'Target rencana berhasil diperbarui.', [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert(t('common_success'), t('plan_modal_success_edit'), [
+          { text: t('common_ok'), onPress: () => router.back() },
         ]);
       } else {
         await createPlan({
@@ -100,13 +102,13 @@ export default function AddPlanModal() {
           is_pinned: isPinned ? 1 : 0,
           notes: notes.trim() || null,
         });
-        Alert.alert('Berhasil', 'Target rencana baru berhasil ditambahkan! 🎯', [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert(t('common_success'), t('plan_modal_success_add'), [
+          { text: t('common_ok'), onPress: () => router.back() },
         ]);
       }
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Gagal menyimpan target rencana.');
+      Alert.alert(t('common_error'), t('plan_modal_err_save'));
     }
   };
 
@@ -121,7 +123,7 @@ export default function AddPlanModal() {
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>
-            {isEditing ? 'Ubah Target Rencana' : 'Buat Target Rencana Baru'}
+            {isEditing ? t('plan_modal_edit_title') : t('plan_modal_add_title')}
           </Text>
           <View style={{ width: 36 }} />
         </View>
@@ -133,7 +135,7 @@ export default function AddPlanModal() {
 
           {/* Amount Input */}
           <View style={[styles.amountCard, shadowStyles.sm]}>
-            <Text style={styles.amountLabel}>TARGET NOMINAL UANG YANG DIBUTUHKAN</Text>
+            <Text style={styles.amountLabel}>{t('plan_modal_amount_label')}</Text>
             <View style={styles.amountInputRow}>
               <Text style={styles.currencyPrefix}>Rp</Text>
               <TextInput
@@ -141,7 +143,7 @@ export default function AddPlanModal() {
                 placeholder="0"
                 placeholderTextColor="#CBD5E1"
                 keyboardType="numeric"
-                value={parsedAmount > 0 ? parsedAmount.toLocaleString('id-ID') : ''}
+                value={rawAmount}
                 onChangeText={handleAmountChange}
                 autoFocus={!isEditing}
               />
@@ -152,14 +154,14 @@ export default function AddPlanModal() {
               <View style={styles.previewBox}>
                 <View style={styles.previewRow}>
                   <Text style={styles.previewLabel}>
-                    Saldo Kas Saat Ini: {formatCurrency(currentBalance)}
+                    {t('plan_modal_current_cash', { amount: formatCurrency(currentBalance, language) })}
                   </Text>
                   <Text
                     style={[
                       styles.previewBadge,
                       { color: isReady ? colors.incomeDark : colors.primaryDark },
                     ]}>
-                    {isReady ? 'Dana Sudah Siap! 🎉' : `${progressPct.toFixed(0)}% Tercapai`}
+                    {isReady ? t('plan_modal_ready_badge') : t('plan_modal_pct_badge', { pct: progressPct.toFixed(0) })}
                   </Text>
                 </View>
                 <View style={styles.previewTrack}>
@@ -179,10 +181,10 @@ export default function AddPlanModal() {
 
           {/* Title Input */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Nama Barang / Rencana Impian *</Text>
+            <Text style={styles.fieldLabel}>{t('plan_modal_title_label')}</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Contoh: Laptop Asus ROG / Beli Kamera / Motor Bekas"
+              placeholder={t('plan_modal_title_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={title}
               onChangeText={setTitle}
@@ -196,9 +198,9 @@ export default function AddPlanModal() {
                 <Ionicons name="star" size={20} color="#F59E0B" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.switchTitle}>Sematkan ke Beranda (⭐ Pin)</Text>
+                <Text style={styles.switchTitle}>{t('plan_modal_pin_title')}</Text>
                 <Text style={styles.switchDesc}>
-                  Pantau progres rencana ini langsung di kartu utama Beranda.
+                  {t('plan_modal_pin_desc')}
                 </Text>
               </View>
             </View>
@@ -212,7 +214,7 @@ export default function AddPlanModal() {
 
           {/* Category Selector */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Pilih Pos Kategori Belanja</Text>
+            <Text style={styles.fieldLabel}>{t('plan_modal_category_label')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -237,7 +239,7 @@ export default function AddPlanModal() {
                         styles.catChipText,
                         selected && { color: cat.color, fontWeight: '700' },
                       ]}>
-                      {cat.name}
+                      {getCategoryName(cat)}
                     </Text>
                   </Pressable>
                 );
@@ -247,10 +249,10 @@ export default function AddPlanModal() {
 
           {/* Target Deadline Date */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Target Tanggal Pembelian (Opsional)</Text>
+            <Text style={styles.fieldLabel}>{t('plan_modal_date_label')}</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Contoh: 2026-12-31 (YYYY-MM-DD)"
+              placeholder={t('plan_modal_date_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={targetDate}
               onChangeText={setTargetDate}
@@ -260,10 +262,10 @@ export default function AddPlanModal() {
 
           {/* Notes Input */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Catatan / Link Toko / Spesifikasi (Opsional)</Text>
+            <Text style={styles.fieldLabel}>{t('plan_modal_notes_label')}</Text>
             <TextInput
               style={[styles.textInput, styles.textArea]}
-              placeholder="Tulis spesifikasi barang, nomor seri, atau catatan penting..."
+              placeholder={t('plan_modal_notes_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={notes}
               onChangeText={setNotes}
@@ -279,7 +281,7 @@ export default function AddPlanModal() {
             onPress={handleSubmit}>
             <Ionicons name="sparkles" size={18} color="#FFFFFF" />
             <Text style={styles.submitBtnText}>
-              {isEditing ? 'Simpan Perubahan' : 'Pasang Target Rencana'}
+              {isEditing ? t('plan_modal_submit_edit') : t('plan_modal_submit_add')}
             </Text>
           </Pressable>
 

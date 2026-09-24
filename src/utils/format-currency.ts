@@ -1,31 +1,43 @@
-/**
- * Utility for formatting Indonesian Rupiah (IDR) currency
- */
+import type { Language } from '@/i18n/types';
 
-export function formatCurrency(amount: number): string {
+const localeTags: Record<Language, string> = {
+  en: 'en-US',
+  id: 'id-ID',
+  zh: 'zh-CN',
+};
+
+export function formatCurrency(amount: number, language: Language = 'id'): string {
   if (isNaN(amount)) return 'Rp 0';
   const rounded = Math.round(amount);
-  const isNegative = rounded < 0;
-  const absVal = Math.abs(rounded);
-  const formatted = absVal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${isNegative ? '-Rp ' : 'Rp '}${formatted}`;
+  const formatted = new Intl.NumberFormat(localeTags[language] || localeTags.id, {
+    maximumFractionDigits: 0,
+  }).format(Math.abs(rounded));
+  return `${rounded < 0 ? '-Rp ' : 'Rp '}${formatted}`;
 }
 
-export function formatCurrencyShort(amount: number): string {
+export function formatCurrencyShort(amount: number, language: Language = 'id'): string {
   if (isNaN(amount) || amount === 0) return 'Rp 0';
   const abs = Math.abs(amount);
   const sign = amount < 0 ? '-' : '';
+  const locale = localeTags[language] || localeTags.id;
+  const formatUnit = (value: number) => new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+  }).format(value);
 
-  if (abs >= 1_000_000_000) {
-    return `${sign}Rp ${(abs / 1_000_000_000).toFixed(1).replace('.0', '')}M`;
+  if (language === 'zh') {
+    if (abs >= 100_000_000) return `${sign}Rp ${formatUnit(abs / 100_000_000)}亿`;
+    if (abs >= 10_000) return `${sign}Rp ${formatUnit(abs / 10_000)}万`;
+  } else if (language === 'en') {
+    if (abs >= 1_000_000_000) return `${sign}Rp ${formatUnit(abs / 1_000_000_000)}B`;
+    if (abs >= 1_000_000) return `${sign}Rp ${formatUnit(abs / 1_000_000)}M`;
+    if (abs >= 1_000) return `${sign}Rp ${formatUnit(abs / 1_000)}K`;
+  } else {
+    if (abs >= 1_000_000_000) return `${sign}Rp ${formatUnit(abs / 1_000_000_000)}M`;
+    if (abs >= 1_000_000) return `${sign}Rp ${formatUnit(abs / 1_000_000)}jt`;
+    if (abs >= 1_000) return `${sign}Rp ${formatUnit(abs / 1_000)}rb`;
   }
-  if (abs >= 1_000_000) {
-    return `${sign}Rp ${(abs / 1_000_000).toFixed(1).replace('.0', '')}jt`;
-  }
-  if (abs >= 1_000) {
-    return `${sign}Rp ${(abs / 1_000).toFixed(0)}rb`;
-  }
-  return `${sign}Rp ${abs}`;
+
+  return `${sign}Rp ${formatCurrency(abs, language).replace(/^Rp /, '')}`;
 }
 
 export function parseCurrencyInput(text: string): number {

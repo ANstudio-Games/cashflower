@@ -24,7 +24,7 @@ export default function BudgetModal() {
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { categories, budgets, saveNewBudget, removeBudget } = useFinance();
-  const { t, getCategoryName } = useI18n();
+  const { t, getCategoryName, language } = useI18n();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('global'); // 'global' or categoryId
   const [rawLimit, setRawLimit] = useState('');
@@ -137,7 +137,7 @@ export default function BudgetModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawLimit ? parseInt(rawLimit, 10).toLocaleString('id-ID') : ''}
+              value={rawLimit}
               onChangeText={(t) => {
                 const num = parseCurrencyInput(t);
                 setRawLimit(num > 0 ? num.toString() : '');
@@ -183,7 +183,7 @@ export default function BudgetModal() {
                   <View style={styles.budgetTitleCol}>
                     <Text style={styles.budgetTitle}>{title}</Text>
                     <Text style={styles.budgetSub}>
-                      {t('budget_spent_label', { spent: formatCurrency(spent), limit: formatCurrency(limit) })}
+                      {t('budget_spent_label', { spent: formatCurrency(spent, language), limit: formatCurrency(limit, language) })}
                     </Text>
                   </View>
                   <View style={styles.budgetRight}>
@@ -214,7 +214,7 @@ export default function BudgetModal() {
 
                 {isOver && (
                   <Text style={styles.overWarningText}>
-                    {t('budget_warning_over', { amount: formatCurrency(spent - limit) })}
+                    {t('budget_warning_over', { amount: formatCurrency(spent - limit, language) })}
                   </Text>
                 )}
               </View>

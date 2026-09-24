@@ -22,7 +22,7 @@ import { useI18n } from '@/i18n';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const {
     transactions,
     wallets,
@@ -111,9 +111,9 @@ export default function HomeScreen() {
                 <Ionicons name="wallet" size={16} color={colors.primary} />
               </View>
               <View>
-                <Text style={styles.walletsSectionTitle}>Dompet & Rekening</Text>
+                <Text style={styles.walletsSectionTitle}>{t('home_wallets_title')}</Text>
                 <Text style={styles.walletsSectionSub}>
-                  {wallets.length} Tempat Simpan Uang
+                  {t('home_wallets_storage_count', { count: wallets.length })}
                 </Text>
               </View>
             </View>
@@ -123,13 +123,13 @@ export default function HomeScreen() {
                 style={({ pressed }) => [styles.transferQuickBtn, pressed && { opacity: 0.8 }]}
                 onPress={() => router.push('/modal/transfer-funds')}>
                 <Ionicons name="swap-horizontal" size={13} color={colors.primaryDark} />
-                <Text style={styles.transferQuickBtnText}>Transfer</Text>
+                <Text style={styles.transferQuickBtnText}>{t('home_wallets_transfer_btn')}</Text>
               </Pressable>
 
               <Pressable
                 style={({ pressed }) => [styles.seeAllWalletsBtn, pressed && { opacity: 0.8 }]}
                 onPress={() => router.push('/modal/wallets')}>
-                <Text style={styles.seeAllWalletsText}>Kelola</Text>
+                <Text style={styles.seeAllWalletsText}>{t('common_manage')}</Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.primary} />
               </Pressable>
             </View>
@@ -155,7 +155,7 @@ export default function HomeScreen() {
               <View style={styles.addWalletCircle}>
                 <Ionicons name="add" size={20} color={colors.primary} />
               </View>
-              <Text style={styles.addWalletText}>+ Dompet</Text>
+              <Text style={styles.addWalletText}>{t('home_wallets_add_short')}</Text>
             </Pressable>
           </ScrollView>
         </View>
@@ -176,7 +176,7 @@ export default function HomeScreen() {
                 </Text>
                 <Text style={styles.budgetWidgetSub}>
                   {globalBudget
-                    ? t('home_budget_spent_of', { spent: formatCurrency(spent), limit: formatCurrency(limit) })
+                    ? t('home_budget_spent_of', { spent: formatCurrency(spent, language), limit: formatCurrency(limit, language) })
                     : t('home_budget_tip')}
                 </Text>
               </View>
@@ -211,13 +211,13 @@ export default function HomeScreen() {
                 <Ionicons name="star" size={16} color="#F59E0B" />
               </View>
               <View>
-                <Text style={styles.plansWidgetTitle}>Target Pembelian & Rencana</Text>
+                <Text style={styles.plansWidgetTitle}>{t('settings_plans_title')}</Text>
                 <Text style={styles.plansWidgetSub}>
                   {pinnedPlans.length > 0
-                    ? `${pinnedPlans.length} Target Dipin • Progres Saldo Kas`
+                    ? t('home_plans_pinned_sub', { count: pinnedPlans.length })
                     : activePlans.length > 0
-                    ? `${activePlans.length} Target Aktif • Belum Dipin`
-                    : 'Pasang target barang impian Anda'}
+                    ? t('home_plans_active_sub', { count: activePlans.length })
+                    : t('home_plans_empty_sub')}
                 </Text>
               </View>
             </View>
@@ -225,7 +225,7 @@ export default function HomeScreen() {
             <Pressable
               onPress={() => router.push('/modal/plans')}
               style={({ pressed }) => [styles.seeAllPlansBtn, pressed && { opacity: 0.8 }]}>
-              <Text style={styles.seeAllPlansText}>Kelola</Text>
+              <Text style={styles.seeAllPlansText}>{t('common_manage')}</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.primary} />
             </Pressable>
           </View>
@@ -253,8 +253,8 @@ export default function HomeScreen() {
               />
               <Text style={styles.emptyPlanText}>
                 {activePlans.length > 0
-                  ? 'Buka daftar target & beri tanda ⭐ agar tampil di sini'
-                  : '+ Pasang Target Barang Impian Baru'}
+                  ? t('home_plans_pin_tip')
+                  : t('home_plans_add_new_btn')}
               </Text>
             </Pressable>
           )}
@@ -274,7 +274,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.widgetTitle}>{t('home_receivable_title')}</Text>
             <Text style={[styles.widgetValue, { color: colors.receivableDark }]}>
-              {formatCurrency(debtSummary.totalReceivable)}
+              {formatCurrency(debtSummary.totalReceivable, language)}
             </Text>
             <Text style={styles.widgetSubtext}>
               {debtSummary.unpaidCount > 0
@@ -300,7 +300,7 @@ export default function HomeScreen() {
                 { color: investmentSummary.totalPnl >= 0 ? colors.incomeDark : colors.expenseDark },
               ]}>
               {investmentSummary.totalPnl >= 0 ? '+' : ''}
-              {formatCurrency(investmentSummary.totalPnl)}
+              {formatCurrency(investmentSummary.totalPnl, language)}
             </Text>
             <Text style={styles.widgetSubtext}>
               {investmentSummary.totalTrades > 0
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 12,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   widgetCard: {
     flex: 1,
@@ -531,8 +531,8 @@ const styles = StyleSheet.create({
   plansWidget: {
     backgroundColor: colors.surface,
     marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 2,
+    marginTop: 2,
+    marginBottom: 12,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   plansWidgetLeft: {
     flexDirection: 'row',
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primaryLight,
     borderStyle: 'dashed',
-    marginTop: 4,
+    marginTop: 6,
   },
   emptyPlanText: {
     fontSize: 12,
