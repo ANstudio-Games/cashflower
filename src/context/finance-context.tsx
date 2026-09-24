@@ -85,7 +85,7 @@ interface FinanceContextType {
   deletePlanById: (id: string) => Promise<void>;
   isMultiWalletEnabled: boolean;
   setMultiWalletEnabled: (enabled: boolean) => Promise<void>;
-  backupData: () => Promise<boolean>;
+  backupData: (dialogTitle?: string) => Promise<boolean>;
   restoreData: () => Promise<number>;
 }
 
@@ -406,8 +406,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const backupData = async () => {
-    return await backupToGoogleDriveOrShare(db);
+  const backupData = async (dialogTitle?: string) => {
+    return await backupToGoogleDriveOrShare(db, dialogTitle);
   };
 
   const restoreData = async () => {

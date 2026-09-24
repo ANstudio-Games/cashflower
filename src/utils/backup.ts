@@ -5,7 +5,10 @@ import * as SQLite from 'expo-sqlite';
 import { exportAllData, importAllData } from '@/db';
 import { BackupData } from '@/types';
 
-export async function backupToGoogleDriveOrShare(db: SQLite.SQLiteDatabase): Promise<boolean> {
+export async function backupToGoogleDriveOrShare(
+  db: SQLite.SQLiteDatabase,
+  dialogTitle: string = 'Save to Google Drive or Share Backup'
+): Promise<boolean> {
   try {
     const data = await exportAllData(db);
     const jsonString = JSON.stringify(data, null, 2);
@@ -25,12 +28,12 @@ export async function backupToGoogleDriveOrShare(db: SQLite.SQLiteDatabase): Pro
     if (isAvailable) {
       await Sharing.shareAsync(fileUri, {
         mimeType: 'application/json',
-        dialogTitle: 'Simpan ke Google Drive atau Bagikan Cadangan',
+        dialogTitle,
         UTI: 'public.json',
       });
       return true;
     } else {
-      throw new Error('Fitur berbagi file tidak tersedia di perangkat ini.');
+      throw new Error('File sharing is not available on this device.');
     }
   } catch (err: any) {
     console.error('Backup error:', err);
