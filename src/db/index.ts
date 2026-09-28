@@ -1064,7 +1064,7 @@ export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupDa
   ]);
 
   return {
-    version: '1.4.0',
+    version: '1.5.0',
     exported_at: new Date().toISOString(),
     categories,
     transactions,
