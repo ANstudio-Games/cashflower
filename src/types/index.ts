@@ -62,6 +62,22 @@ export interface Debt {
   paid_date?: string | null;
   notes?: string | null;
   created_at: number;
+  paid_amount?: number;
+  remaining_amount?: number;
+}
+
+export interface DebtPayment {
+  id: string;
+  debt_id: string;
+  amount: number;
+  payment_date: string; // YYYY-MM-DD
+  wallet_id?: string | null;
+  transaction_id?: string | null;
+  notes?: string | null;
+  created_at: number;
+  wallet_name?: string;
+  wallet_icon?: string;
+  wallet_color?: string;
 }
 
 export type InvestmentInstrument = 'saham' | 'kripto' | 'forex' | 'reksadana' | 'emas' | 'lainnya';
@@ -135,6 +151,7 @@ export interface BackupData {
   transactions: Transaction[];
   categories: Category[];
   debts: Debt[];
+  debt_payments?: DebtPayment[];
   investments: Investment[];
   budgets: Budget[];
   plans?: FinancialPlan[];

@@ -30,6 +30,10 @@ export default function RootLayout() {
               options={{ presentation: 'modal', headerShown: false }}
             />
             <Stack.Screen
+              name="modal/debt-detail"
+              options={{ presentation: 'modal', headerShown: false }}
+            />
+            <Stack.Screen
               name="modal/add-investment"
               options={{ presentation: 'modal', headerShown: false }}
             />

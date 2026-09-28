@@ -122,7 +122,22 @@ export default function DebtsScreen() {
         renderItem={({ item }) => (
           <DebtItem
             item={item}
-            onTogglePaid={(id, isPaid) => toggleDebtStatus(id, isPaid)}
+            onPress={(debt) =>
+              router.push({
+                pathname: '/modal/debt-detail',
+                params: { id: debt.id },
+              })
+            }
+            onTogglePaid={(id, isPaid) => {
+              if (isPaid) {
+                router.push({
+                  pathname: '/modal/debt-detail',
+                  params: { id },
+                });
+              } else {
+                toggleDebtStatus(id, false);
+              }
+            }}
             onDelete={(id) => deleteDebtById(id)}
           />
         )}

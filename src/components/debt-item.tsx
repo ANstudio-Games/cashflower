@@ -8,14 +8,20 @@ import { useI18n } from '@/i18n';
 
 interface DebtItemProps {
   item: Debt;
+  onPress?: (item: Debt) => void;
   onTogglePaid: (id: string, isPaid: boolean) => void;
   onDelete: (id: string) => void;
 }
 
-export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
+export function DebtItem({ item, onPress, onTogglePaid, onDelete }: DebtItemProps) {
   const isReceivable = item.type === 'receivable'; // Orang pinjam ke user (user menagih)
   const isPaid = item.is_paid === 1;
   const { t, language, formatDateShort } = useI18n();
+
+  const paidAmount = item.paid_amount ?? (isPaid ? item.amount : 0);
+  const remainingAmount = item.remaining_amount ?? (isPaid ? 0 : Math.max(0, item.amount - paidAmount));
+  const hasPayments = paidAmount > 0;
+  const progressPercent = item.amount > 0 ? Math.min(100, Math.round((paidAmount / item.amount) * 100)) : 0;
 
   const handleDelete = () => {
     Alert.alert(
@@ -48,6 +54,14 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
     );
   };
 
+  const handleStatusPress = () => {
+    if (!isPaid && onPress) {
+      onPress(item);
+    } else {
+      handleToggle();
+    }
+  };
+
   // Check if overdue
   const isOverdue =
     !isPaid &&
@@ -58,7 +72,13 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
   const themeSoft = isReceivable ? colors.receivableSoft : colors.debtSoft;
 
   return (
-    <View style={[styles.card, isPaid && styles.cardPaid]}>
+    <Pressable
+      onPress={() => onPress?.(item)}
+      style={({ pressed }) => [
+        styles.card,
+        isPaid && styles.cardPaid,
+        pressed && onPress && { opacity: 0.92 },
+      ]}>
       <View style={styles.headerRow}>
         {/* Type Badge */}
         <View style={[styles.badge, { backgroundColor: themeSoft }]}>
@@ -74,7 +94,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
 
         {/* Status Pill */}
         <Pressable
-          onPress={handleToggle}
+          onPress={handleStatusPress}
           style={({ pressed }) => [
             styles.statusPill,
             isPaid ? styles.statusPillPaid : styles.statusPillUnpaid,
@@ -104,28 +124,70 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
           ) : null}
         </View>
 
-        <Text style={[styles.amount, { color: themeColor }, isPaid && styles.textMutedAmount]}>
-          {formatCurrency(item.amount, language)}
-        </Text>
+        <View style={styles.amountCol}>
+          {!isPaid && hasPayments ? (
+            <>
+              <Text style={[styles.remainingAmount, { color: themeColor }]}>
+                {formatCurrency(remainingAmount, language)}
+              </Text>
+              <Text style={styles.totalSubText}>
+                {t('debt_item_total_sub', { amount: formatCurrency(item.amount, language) })}
+              </Text>
+            </>
+          ) : (
+            <Text style={[styles.amount, { color: themeColor }, isPaid && styles.textMutedAmount]}>
+              {formatCurrency(item.amount, language)}
+            </Text>
+          )}
+        </View>
       </View>
 
-      {/* Dates & Actions footer */}
-        <View style={styles.footerRow}>
-          <View style={styles.dateCol}>
-            <Text style={styles.dateLabel}>{t('debt_borrow_date', { date: formatDateShort(item.issue_date) })}</Text>
-            {item.due_date ? (
-              <Text style={[styles.dateLabel, isOverdue && styles.overdueText]}>
-                {isOverdue
-                  ? t('debt_overdue', { date: formatDateShort(item.due_date) })
-                  : t('debt_due_date', { date: formatDateShort(item.due_date) })}
-              </Text>
-            ) : null}
+      {/* Progress Bar (if payments have been made) */}
+      {hasPayments && (
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBarTrack}>
+            <View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: `${progressPercent}%`,
+                  backgroundColor: isPaid ? colors.incomeDark : themeColor,
+                },
+              ]}
+            />
           </View>
+          <View style={styles.progressLabelRow}>
+            <Text style={styles.progressLabelText}>
+              {t('debt_item_paid_label', { amount: formatCurrency(paidAmount, language) })}
+            </Text>
+            <Text
+              style={[
+                styles.progressPercentText,
+                { color: isPaid ? colors.incomeDark : themeColor },
+              ]}>
+              {progressPercent}%
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Dates & Actions footer */}
+      <View style={styles.footerRow}>
+        <View style={styles.dateCol}>
+          <Text style={styles.dateLabel}>{t('debt_borrow_date', { date: formatDateShort(item.issue_date) })}</Text>
+          {item.due_date ? (
+            <Text style={[styles.dateLabel, isOverdue && styles.overdueText]}>
+              {isOverdue
+                ? t('debt_overdue', { date: formatDateShort(item.due_date) })
+                : t('debt_due_date', { date: formatDateShort(item.due_date) })}
+            </Text>
+          ) : null}
+        </View>
 
         <View style={styles.actionButtons}>
           <Pressable
             hitSlop={8}
-            onPress={handleToggle}
+            onPress={handleStatusPress}
             style={({ pressed }) => [
               styles.actionBtn,
               isPaid ? styles.actionBtnUndo : styles.actionBtnComplete,
@@ -136,7 +198,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
                 styles.actionBtnText,
                 { color: isPaid ? colors.textSecondary : colors.incomeDark },
               ]}>
-              {isPaid ? t('debt_btn_unsettle') : t('debt_btn_settle')}
+              {isPaid ? t('debt_action_undo') : t('debt_action_pay_or_installment')}
             </Text>
           </Pressable>
 
@@ -148,7 +210,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
           </Pressable>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -236,8 +298,48 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
   },
+  amountCol: {
+    alignItems: 'flex-end',
+  },
+  remainingAmount: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  totalSubText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
   textMutedAmount: {
     opacity: 0.6,
+  },
+  progressContainer: {
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: colors.borderLight,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  progressLabelText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  progressPercentText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   footerRow: {
     flexDirection: 'row',

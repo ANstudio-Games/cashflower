@@ -5,6 +5,7 @@ import {
   Category,
   Transaction,
   Debt,
+  DebtPayment,
   Investment,
   Budget,
   FinancialPlan,
@@ -26,6 +27,9 @@ import {
   toggleDebtPaid,
   deleteDebt,
   getDebtSummary,
+  getDebtPayments,
+  addDebtPayment,
+  deleteDebtPayment,
   getInvestments,
   addInvestment,
   deleteInvestment,
@@ -75,6 +79,15 @@ interface FinanceContextType {
   createDebt: (debt: Omit<Debt, 'id' | 'created_at'>) => Promise<void>;
   toggleDebtStatus: (id: string, isPaid: boolean) => Promise<void>;
   deleteDebtById: (id: string) => Promise<void>;
+  getDebtPayments: (debtId: string) => Promise<DebtPayment[]>;
+  createDebtPayment: (params: {
+    debtId: string;
+    amount: number;
+    paymentDate: string;
+    walletId: string;
+    notes?: string | null;
+  }) => Promise<void>;
+  deleteDebtPaymentById: (paymentId: string) => Promise<void>;
   createInvestment: (item: Omit<Investment, 'id' | 'created_at' | 'pnl' | 'pnl_percentage'>) => Promise<void>;
   deleteInvestmentById: (id: string) => Promise<void>;
   saveNewBudget: (budget: { id: string; category_id: string | null; monthly_limit: number }) => Promise<void>;
@@ -298,6 +311,34 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await refreshAll();
   };
 
+  const getDebtPaymentsList = async (debtId: string): Promise<DebtPayment[]> => {
+    return await getDebtPayments(db, debtId);
+  };
+
+  const createDebtPayment = async (params: {
+    debtId: string;
+    amount: number;
+    paymentDate: string;
+    walletId: string;
+    notes?: string | null;
+  }) => {
+    await addDebtPayment(db, {
+      debt_id: params.debtId,
+      amount: params.amount,
+      payment_date: params.paymentDate,
+      wallet_id: params.walletId,
+      notes: params.notes,
+    });
+    triggerHaptic();
+    await refreshAll();
+  };
+
+  const deleteDebtPaymentById = async (paymentId: string) => {
+    await deleteDebtPayment(db, paymentId);
+    triggerHaptic();
+    await refreshAll();
+  };
+
   const createInvestment = async (item: Omit<Investment, 'id' | 'created_at' | 'pnl' | 'pnl_percentage'>) => {
     const pnl = item.sell_price - item.buy_price;
     const pnl_percentage = item.buy_price > 0 ? (pnl / item.buy_price) * 100 : 0;
@@ -470,6 +511,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         createDebt,
         toggleDebtStatus,
         deleteDebtById,
+        getDebtPayments: getDebtPaymentsList,
+        createDebtPayment,
+        deleteDebtPaymentById,
         createInvestment,
         deleteInvestmentById,
         saveNewBudget,

@@ -3,6 +3,7 @@ import {
   Category,
   Transaction,
   Debt,
+  DebtPayment,
   Investment,
   Budget,
   FinancialPlan,
@@ -41,6 +42,9 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'is_default'>[] = [
   { id: 'cat_other_inc', name: 'Pemasukan Lain', type: 'income', icon: 'wallet-outline', color: '#059669' },
   // Transfer
   { id: 'cat_transfer', name: 'Transfer Antar Dompet', type: 'expense', icon: 'swap-horizontal-outline', color: '#6366F1' },
+  // Hutang & Piutang Pelunasan
+  { id: 'cat_debt_payment', name: 'Pembayaran Hutang', type: 'expense', icon: 'cash-outline', color: '#EF4444' },
+  { id: 'cat_receivable_payment', name: 'Pelunasan Piutang', type: 'income', icon: 'wallet-outline', color: '#10B981' },
 ];
 
 export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
@@ -131,6 +135,20 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       FOREIGN KEY (category_id) REFERENCES categories (id)
     );
 
+    CREATE TABLE IF NOT EXISTS debt_payments (
+      id TEXT PRIMARY KEY,
+      debt_id TEXT NOT NULL,
+      amount REAL NOT NULL,
+      payment_date TEXT NOT NULL,
+      wallet_id TEXT,
+      transaction_id TEXT,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (debt_id) REFERENCES debts (id) ON DELETE CASCADE,
+      FOREIGN KEY (wallet_id) REFERENCES wallets (id) ON DELETE SET NULL,
+      FOREIGN KEY (transaction_id) REFERENCES transactions (id) ON DELETE SET NULL
+    );
+
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -201,6 +219,12 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     // Ensure transfer category exists even if categories already seeded
     await db.runAsync(
       "INSERT OR IGNORE INTO categories (id, name, type, icon, color, is_default) VALUES ('cat_transfer', 'Transfer Antar Dompet', 'expense', 'swap-horizontal-outline', '#6366F1', 1)"
+    );
+    await db.runAsync(
+      "INSERT OR IGNORE INTO categories (id, name, type, icon, color, is_default) VALUES ('cat_debt_payment', 'Pembayaran Hutang', 'expense', 'cash-outline', '#EF4444', 1)"
+    );
+    await db.runAsync(
+      "INSERT OR IGNORE INTO categories (id, name, type, icon, color, is_default) VALUES ('cat_receivable_payment', 'Pelunasan Piutang', 'income', 'wallet-outline', '#10B981', 1)"
     );
   }
 }
@@ -550,20 +574,65 @@ export async function getDebts(
   db: SQLite.SQLiteDatabase,
   options?: { type?: 'receivable' | 'payable'; isPaid?: boolean }
 ): Promise<Debt[]> {
-  let query = 'SELECT * FROM debts WHERE 1=1';
+  let query = `
+    SELECT 
+      d.*,
+      COALESCE(
+        (SELECT SUM(dp.amount) FROM debt_payments dp WHERE dp.debt_id = d.id),
+        CASE WHEN d.is_paid = 1 THEN d.amount ELSE 0 END
+      ) as paid_amount
+    FROM debts d
+    WHERE 1=1
+  `;
   const params: any[] = [];
 
   if (options?.type) {
-    query += ' AND type = ?';
+    query += ' AND d.type = ?';
     params.push(options.type);
   }
   if (options?.isPaid !== undefined) {
-    query += ' AND is_paid = ?';
+    query += ' AND d.is_paid = ?';
     params.push(options.isPaid ? 1 : 0);
   }
 
-  query += ' ORDER BY is_paid ASC, due_date ASC, created_at DESC';
-  return await db.getAllAsync<Debt>(query, params);
+  query += ' ORDER BY d.is_paid ASC, d.due_date ASC, d.created_at DESC';
+  const rows = await db.getAllAsync<Debt & { paid_amount: number | null }>(query, params);
+
+  return rows.map((row) => {
+    const paid = row.paid_amount ?? (row.is_paid === 1 ? row.amount : 0);
+    const remaining = row.is_paid === 1 ? 0 : Math.max(0, row.amount - paid);
+    return {
+      ...row,
+      paid_amount: paid,
+      remaining_amount: remaining,
+    };
+  });
+}
+
+export async function getDebtById(
+  db: SQLite.SQLiteDatabase,
+  id: string
+): Promise<Debt | null> {
+  const query = `
+    SELECT 
+      d.*,
+      COALESCE(
+        (SELECT SUM(dp.amount) FROM debt_payments dp WHERE dp.debt_id = d.id),
+        CASE WHEN d.is_paid = 1 THEN d.amount ELSE 0 END
+      ) as paid_amount
+    FROM debts d
+    WHERE d.id = ?
+  `;
+  const row = await db.getFirstAsync<Debt & { paid_amount: number | null }>(query, [id]);
+  if (!row) return null;
+
+  const paid = row.paid_amount ?? (row.is_paid === 1 ? row.amount : 0);
+  const remaining = row.is_paid === 1 ? 0 : Math.max(0, row.amount - paid);
+  return {
+    ...row,
+    paid_amount: paid,
+    remaining_amount: remaining,
+  };
 }
 
 export async function addDebt(db: SQLite.SQLiteDatabase, debt: Debt): Promise<void> {
@@ -586,8 +655,149 @@ export async function toggleDebtPaid(
   );
 }
 
+export async function getDebtPayments(
+  db: SQLite.SQLiteDatabase,
+  debtId: string
+): Promise<DebtPayment[]> {
+  const query = `
+    SELECT 
+      dp.*,
+      w.name as wallet_name,
+      w.icon as wallet_icon,
+      w.color as wallet_color
+    FROM debt_payments dp
+    LEFT JOIN wallets w ON dp.wallet_id = w.id
+    WHERE dp.debt_id = ?
+    ORDER BY dp.payment_date DESC, dp.created_at DESC
+  `;
+  return await db.getAllAsync<DebtPayment>(query, [debtId]);
+}
+
+export async function addDebtPayment(
+  db: SQLite.SQLiteDatabase,
+  payment: Omit<DebtPayment, 'id' | 'created_at' | 'transaction_id'>
+): Promise<DebtPayment> {
+  let result: DebtPayment | null = null;
+  await db.withTransactionAsync(async () => {
+    const debt = await db.getFirstAsync<Debt>('SELECT * FROM debts WHERE id = ?', [payment.debt_id]);
+    if (!debt) {
+      throw new Error(`Debt not found with id: ${payment.debt_id}`);
+    }
+
+    const now = Date.now();
+    const txId = `tx_dp_${now}_${Math.random().toString(36).substring(2, 7)}`;
+    const isReceivable = debt.type === 'receivable';
+    const txTitle = isReceivable
+      ? `Pelunasan Piutang: ${debt.person_name}`
+      : `Cicilan Hutang: ${debt.person_name}`;
+    const txType: 'income' | 'expense' = isReceivable ? 'income' : 'expense';
+    const catId = isReceivable ? 'cat_receivable_payment' : 'cat_debt_payment';
+
+    await db.runAsync(
+      `INSERT INTO transactions (id, title, amount, type, category_id, wallet_id, destination_wallet_id, date, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+      [
+        txId,
+        txTitle,
+        payment.amount,
+        txType,
+        catId,
+        payment.wallet_id || 'wallet_cash',
+        payment.payment_date,
+        payment.notes ?? null,
+        now,
+      ]
+    );
+
+    const paymentId = `dp_${now}_${Math.random().toString(36).substring(2, 7)}`;
+    await db.runAsync(
+      `INSERT INTO debt_payments (id, debt_id, amount, payment_date, wallet_id, transaction_id, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        paymentId,
+        payment.debt_id,
+        payment.amount,
+        payment.payment_date,
+        payment.wallet_id ?? null,
+        txId,
+        payment.notes ?? null,
+        now,
+      ]
+    );
+
+    const paidRow = await db.getFirstAsync<{ total_paid: number }>(
+      'SELECT COALESCE(SUM(amount), 0) as total_paid FROM debt_payments WHERE debt_id = ?',
+      [payment.debt_id]
+    );
+    const totalPaid = paidRow?.total_paid || 0;
+
+    if (totalPaid >= debt.amount) {
+      await db.runAsync('UPDATE debts SET is_paid = 1, paid_date = ? WHERE id = ?', [
+        payment.payment_date,
+        payment.debt_id,
+      ]);
+    }
+
+    result = {
+      id: paymentId,
+      debt_id: payment.debt_id,
+      amount: payment.amount,
+      payment_date: payment.payment_date,
+      wallet_id: payment.wallet_id,
+      transaction_id: txId,
+      notes: payment.notes,
+      created_at: now,
+    };
+  });
+
+  return result!;
+}
+
+export async function deleteDebtPayment(
+  db: SQLite.SQLiteDatabase,
+  paymentId: string
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    const payment = await db.getFirstAsync<DebtPayment>(
+      'SELECT * FROM debt_payments WHERE id = ?',
+      [paymentId]
+    );
+    if (!payment) return;
+
+    if (payment.transaction_id) {
+      await db.runAsync('DELETE FROM transactions WHERE id = ?', [payment.transaction_id]);
+    }
+
+    await db.runAsync('DELETE FROM debt_payments WHERE id = ?', [paymentId]);
+
+    const debt = await db.getFirstAsync<Debt>('SELECT * FROM debts WHERE id = ?', [payment.debt_id]);
+    if (debt) {
+      const paidRow = await db.getFirstAsync<{ total_paid: number }>(
+        'SELECT COALESCE(SUM(amount), 0) as total_paid FROM debt_payments WHERE debt_id = ?',
+        [payment.debt_id]
+      );
+      const totalPaid = paidRow?.total_paid || 0;
+
+      if (totalPaid < debt.amount) {
+        await db.runAsync('UPDATE debts SET is_paid = 0, paid_date = NULL WHERE id = ?', [
+          payment.debt_id,
+        ]);
+      }
+    }
+  });
+}
+
 export async function deleteDebt(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
-  await db.runAsync('DELETE FROM debts WHERE id = ?', [id]);
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `DELETE FROM transactions WHERE id IN (
+        SELECT transaction_id FROM debt_payments WHERE debt_id = ? AND transaction_id IS NOT NULL
+      )`,
+      [id]
+    );
+    await db.runAsync('DELETE FROM debt_payments WHERE id = ?', [id]);
+    await db.runAsync('DELETE FROM debts WHERE id = ?', [id]);
+  });
 }
 
 export async function getDebtSummary(db: SQLite.SQLiteDatabase): Promise<DebtSummary> {
@@ -597,10 +807,14 @@ export async function getDebtSummary(db: SQLite.SQLiteDatabase): Promise<DebtSum
     unpaidCount: number;
   }>(`
     SELECT 
-      COALESCE(SUM(CASE WHEN type = 'receivable' AND is_paid = 0 THEN amount ELSE 0 END), 0) as totalReceivable,
-      COALESCE(SUM(CASE WHEN type = 'payable' AND is_paid = 0 THEN amount ELSE 0 END), 0) as totalPayable,
-      COUNT(CASE WHEN is_paid = 0 THEN 1 END) as unpaidCount
-    FROM debts
+      COALESCE(SUM(CASE WHEN d.type = 'receivable' AND d.is_paid = 0 THEN 
+        MAX(0, d.amount - COALESCE((SELECT SUM(dp.amount) FROM debt_payments dp WHERE dp.debt_id = d.id), 0))
+      ELSE 0 END), 0) as totalReceivable,
+      COALESCE(SUM(CASE WHEN d.type = 'payable' AND d.is_paid = 0 THEN 
+        MAX(0, d.amount - COALESCE((SELECT SUM(dp.amount) FROM debt_payments dp WHERE dp.debt_id = d.id), 0))
+      ELSE 0 END), 0) as totalPayable,
+      COUNT(CASE WHEN d.is_paid = 0 THEN 1 END) as unpaidCount
+    FROM debts d
   `);
 
   return {
@@ -837,10 +1051,11 @@ export async function setSetting(
 // ------------------- Backup & Restore Operations -------------------
 
 export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupData> {
-  const [categories, transactions, debts, investments, budgets, plans, wallets, multiWalletVal] = await Promise.all([
+  const [categories, transactions, debts, debtPayments, investments, budgets, plans, wallets, multiWalletVal] = await Promise.all([
     db.getAllAsync<Category>('SELECT * FROM categories'),
     db.getAllAsync<Transaction>('SELECT * FROM transactions'),
     db.getAllAsync<Debt>('SELECT * FROM debts'),
+    db.getAllAsync<DebtPayment>('SELECT * FROM debt_payments'),
     db.getAllAsync<Investment>('SELECT * FROM investments'),
     db.getAllAsync<Budget>('SELECT * FROM budgets'),
     db.getAllAsync<FinancialPlan>('SELECT * FROM financial_plans'),
@@ -854,6 +1069,7 @@ export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupDa
     categories,
     transactions,
     debts,
+    debt_payments: debtPayments,
     investments,
     budgets,
     plans,
@@ -869,6 +1085,7 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
     // Clear current tables
     await db.execAsync(`
       DELETE FROM transactions;
+      DELETE FROM debt_payments;
       DELETE FROM debts;
       DELETE FROM investments;
       DELETE FROM budgets;
@@ -936,6 +1153,26 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
           `INSERT INTO debts (id, person_name, type, amount, due_date, issue_date, is_paid, paid_date, notes, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [d.id, d.person_name, d.type, d.amount, d.due_date ?? null, d.issue_date, d.is_paid, d.paid_date ?? null, d.notes ?? null, d.created_at || Date.now()]
+        );
+      }
+    }
+
+    // Restore debt payments
+    if (Array.isArray(backup.debt_payments)) {
+      for (const dp of backup.debt_payments) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO debt_payments (id, debt_id, amount, payment_date, wallet_id, transaction_id, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            dp.id,
+            dp.debt_id,
+            dp.amount,
+            dp.payment_date,
+            dp.wallet_id ?? null,
+            dp.transaction_id ?? null,
+            dp.notes ?? null,
+            dp.created_at || Date.now(),
+          ]
         );
       }
     }
