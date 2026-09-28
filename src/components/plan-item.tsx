@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FinancialPlan } from '@/types';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
-import { formatDateShort } from '@/utils/format-date';
+import { useI18n } from '@/i18n';
 
 interface PlanItemProps {
   plan: FinancialPlan;
@@ -27,6 +27,7 @@ export function PlanItem({
   onDelete,
   compact = false,
 }: PlanItemProps) {
+  const { t, language, formatDateShort, getCategoryName } = useI18n();
   const isCompleted = plan.is_completed === 1;
   const target = plan.target_amount || 1;
   const balance = Math.max(0, currentBalance);
@@ -38,20 +39,20 @@ export function PlanItem({
 
   let statusColor = colors.warning;
   let statusBg = colors.warningSoft;
-  let statusText = `Kurang ${formatCurrency(remaining)}`;
+  let statusText = t('plan_status_shortage', { amount: formatCurrency(remaining, language) });
 
   if (isCompleted) {
     statusColor = colors.incomeDark;
     statusBg = colors.incomeSoft;
-    statusText = 'Tercapai';
+    statusText = t('plan_status_completed');
   } else if (isReady) {
     statusColor = colors.incomeDark;
     statusBg = colors.incomeSoft;
-    statusText = 'Dana Siap Dibeli!';
+    statusText = t('plan_status_ready');
   } else if (currentBalance <= 0) {
     statusColor = colors.expense;
     statusBg = colors.expenseSoft;
-    statusText = `Saldo Kas Kosong`;
+    statusText = t('plan_status_empty_balance');
   }
 
   return (
@@ -82,7 +83,9 @@ export function PlanItem({
               {plan.title}
             </Text>
             {plan.category_name && (
-              <Text style={styles.categorySub}>{plan.category_name}</Text>
+              <Text style={styles.categorySub}>
+                {getCategoryName({ id: plan.category_id, name: plan.category_name }) || plan.category_name}
+              </Text>
             )}
           </View>
         </View>
@@ -118,8 +121,8 @@ export function PlanItem({
       {/* Target Amount and Status Badge */}
       <View style={styles.amountRow}>
         <View>
-          <Text style={styles.targetLabel}>Target Pembelian</Text>
-          <Text style={styles.targetAmount}>{formatCurrency(plan.target_amount)}</Text>
+          <Text style={styles.targetLabel}>{t('plan_target_amount_label')}</Text>
+          <Text style={styles.targetAmount}>{formatCurrency(plan.target_amount, language)}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
           {isReady && <Ionicons name="checkmark-circle" size={13} color={statusColor} style={{ marginRight: 3 }} />}
@@ -143,8 +146,8 @@ export function PlanItem({
         <View style={styles.progressInfoRow}>
           <Text style={styles.progressSub}>
             {isCompleted
-              ? 'Target impian berhasil dibeli'
-              : `Saldo Kas: ${formatCurrency(balance)}`}
+              ? t('plan_fulfilled_desc')
+              : t('plan_current_cash', { balance: formatCurrency(balance, language) })}
           </Text>
           <Text
             style={[
@@ -162,7 +165,9 @@ export function PlanItem({
           {plan.target_date ? (
             <View style={styles.footerItem}>
               <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.footerText}>Target: {formatDateShort(plan.target_date)}</Text>
+              <Text style={styles.footerText}>
+                {t('plan_target_date_prefix', { date: formatDateShort(plan.target_date) })}
+              </Text>
             </View>
           ) : null}
           {plan.notes ? (
@@ -179,7 +184,7 @@ export function PlanItem({
           style={({ pressed }) => [styles.fulfillBtn, pressed && { opacity: 0.85 }]}
           onPress={() => onFulfill(plan.id)}>
           <Ionicons name="cart-outline" size={17} color="#FFFFFF" />
-          <Text style={styles.fulfillBtnText}>Beli & Catat Pengeluaran</Text>
+          <Text style={styles.fulfillBtnText}>{t('plan_action_fulfill')}</Text>
         </Pressable>
       )}
     </Pressable>

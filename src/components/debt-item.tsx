@@ -15,7 +15,7 @@ interface DebtItemProps {
 export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
   const isReceivable = item.type === 'receivable'; // Orang pinjam ke user (user menagih)
   const isPaid = item.is_paid === 1;
-  const { t, formatDateShort } = useI18n();
+  const { t, language, formatDateShort } = useI18n();
 
   const handleDelete = () => {
     Alert.alert(
@@ -36,7 +36,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
       isPaid ? t('debt_toggle_title_settled') : t('debt_toggle_title_unsettled'),
       t('debt_toggle_msg', {
         person: item.person_name,
-        amount: formatCurrency(item.amount),
+        amount: formatCurrency(item.amount, language),
       }),
       [
         { text: t('common_cancel'), style: 'cancel' },
@@ -105,7 +105,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
         </View>
 
         <Text style={[styles.amount, { color: themeColor }, isPaid && styles.textMutedAmount]}>
-          {formatCurrency(item.amount)}
+          {formatCurrency(item.amount, language)}
         </Text>
       </View>
 
@@ -136,7 +136,7 @@ export function DebtItem({ item, onTogglePaid, onDelete }: DebtItemProps) {
                 styles.actionBtnText,
                 { color: isPaid ? colors.textSecondary : colors.incomeDark },
               ]}>
-              {isPaid ? 'Batal' : 'Lunaskan'}
+              {isPaid ? t('debt_btn_unsettle') : t('debt_btn_settle')}
             </Text>
           </Pressable>
 

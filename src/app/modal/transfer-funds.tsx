@@ -18,6 +18,7 @@ import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
 import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
+import { useI18n } from '@/i18n';
 
 export default function TransferFundsModal() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function TransferFundsModal() {
   const params = useLocalSearchParams<{ sourceId?: string; destId?: string }>();
 
   const { wallets, transferBetweenWallets } = useFinance();
+  const { t, getWalletName, language } = useI18n();
 
   const [sourceId, setSourceId] = useState<string>(
     params.sourceId || (wallets.length > 0 ? wallets[0].id : '')
@@ -55,15 +57,15 @@ export default function TransferFundsModal() {
 
   const handleSubmit = async () => {
     if (!sourceId || !destId) {
-      Alert.alert('Perhatian', 'Mohon pilih dompet asal dan dompet tujuan.');
+      Alert.alert(t('common_attention'), t('transfer_modal_err_select'));
       return;
     }
     if (sourceId === destId) {
-      Alert.alert('Perhatian', 'Dompet asal dan tujuan tidak boleh sama.');
+      Alert.alert(t('common_attention'), t('transfer_modal_err_same'));
       return;
     }
     if (transferAmount <= 0) {
-      Alert.alert('Perhatian', 'Mohon masukkan nominal transfer yang valid.');
+      Alert.alert(t('common_attention'), t('transfer_modal_err_amount'));
       return;
     }
 
@@ -78,7 +80,7 @@ export default function TransferFundsModal() {
       router.back();
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Gagal', 'Terjadi kesalahan saat memproses transfer.');
+      Alert.alert(t('common_error'), t('transfer_modal_err_failed'));
     }
   };
 
@@ -91,7 +93,7 @@ export default function TransferFundsModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Transfer Antar Dompet</Text>
+        <Text style={styles.headerTitle}>{t('transfer_modal_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -101,7 +103,7 @@ export default function TransferFundsModal() {
         showsVerticalScrollIndicator={false}>
         {/* Source Wallet Selector */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Dari Dompet (Sumber Dana)</Text>
+          <Text style={styles.sectionLabel}>{t('transfer_modal_from_label')}</Text>
           <View style={styles.walletsRow}>
             {wallets.map((w) => {
               const isSelected = sourceId === w.id;
@@ -123,10 +125,10 @@ export default function TransferFundsModal() {
                   />
                   <View>
                     <Text style={[styles.walletChipTitle, isSelected && { color: w.color, fontWeight: '700' }]}>
-                      {w.name}
+                      {getWalletName(w)}
                     </Text>
                     <Text style={styles.walletChipBalance}>
-                      {formatCurrency(w.balance || 0)}
+                      {formatCurrency(w.balance || 0, language)}
                     </Text>
                   </View>
                 </Pressable>
@@ -146,7 +148,7 @@ export default function TransferFundsModal() {
 
         {/* Destination Wallet Selector */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Ke Dompet (Tujuan Dana)</Text>
+          <Text style={styles.sectionLabel}>{t('transfer_modal_to_label')}</Text>
           <View style={styles.walletsRow}>
             {wallets.map((w) => {
               const isSelected = destId === w.id;
@@ -168,10 +170,10 @@ export default function TransferFundsModal() {
                   />
                   <View>
                     <Text style={[styles.walletChipTitle, isSelected && { color: w.color, fontWeight: '700' }]}>
-                      {w.name}
+                      {getWalletName(w)}
                     </Text>
                     <Text style={styles.walletChipBalance}>
-                      {formatCurrency(w.balance || 0)}
+                      {formatCurrency(w.balance || 0, language)}
                     </Text>
                   </View>
                 </Pressable>
@@ -182,7 +184,7 @@ export default function TransferFundsModal() {
 
         {/* Amount Input */}
         <View style={styles.amountCard}>
-          <Text style={styles.amountLabel}>Nominal Uang yang Dipindahkan</Text>
+          <Text style={styles.amountLabel}>{t('transfer_modal_amount_label')}</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
             <TextInput
@@ -190,7 +192,7 @@ export default function TransferFundsModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawAmount ? parseInt(rawAmount, 10).toLocaleString('id-ID') : ''}
+              value={rawAmount}
               onChangeText={handleAmountChange}
               autoFocus
             />
@@ -200,22 +202,22 @@ export default function TransferFundsModal() {
         {/* Transfer Impact Preview Card */}
         {sourceWallet && destWallet && transferAmount > 0 && (
           <View style={styles.previewCard}>
-            <Text style={styles.previewTitle}>Ringkasan Perubahan Saldo:</Text>
+            <Text style={styles.previewTitle}>{t('transfer_modal_preview_title')}</Text>
             <View style={styles.previewRow}>
-              <Text style={styles.previewLabel}>{sourceWallet.name}:</Text>
+              <Text style={styles.previewLabel}>{getWalletName(sourceWallet)}:</Text>
               <Text style={styles.previewSub}>
-                {formatCurrency(sourceWallet.balance || 0)} ➔{' '}
+                {formatCurrency(sourceWallet.balance || 0, language)} ➔{' '}
                 <Text style={{ color: colors.expenseDark, fontWeight: '700' }}>
-                  {formatCurrency((sourceWallet.balance || 0) - transferAmount)}
+                  {formatCurrency((sourceWallet.balance || 0) - transferAmount, language)}
                 </Text>
               </Text>
             </View>
             <View style={styles.previewRow}>
-              <Text style={styles.previewLabel}>{destWallet.name}:</Text>
+              <Text style={styles.previewLabel}>{getWalletName(destWallet)}:</Text>
               <Text style={styles.previewSub}>
-                {formatCurrency(destWallet.balance || 0)} ➔{' '}
+                {formatCurrency(destWallet.balance || 0, language)} ➔{' '}
                 <Text style={{ color: colors.incomeDark, fontWeight: '700' }}>
-                  {formatCurrency((destWallet.balance || 0) + transferAmount)}
+                  {formatCurrency((destWallet.balance || 0) + transferAmount, language)}
                 </Text>
               </Text>
             </View>
@@ -224,7 +226,7 @@ export default function TransferFundsModal() {
 
         {/* Date Selector */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Tanggal Transfer (YYYY-MM-DD)</Text>
+          <Text style={styles.sectionLabel}>{t('transfer_modal_date_label')}</Text>
           <View style={styles.dateRow}>
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
@@ -234,17 +236,17 @@ export default function TransferFundsModal() {
               placeholderTextColor={colors.textMuted}
             />
             <Pressable style={styles.todayBtn} onPress={() => setDate(getTodayISO())}>
-              <Text style={styles.todayBtnText}>Hari Ini</Text>
+              <Text style={styles.todayBtnText}>{t('common_today')}</Text>
             </Pressable>
           </View>
         </View>
 
         {/* Notes */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Keterangan / Catatan (Opsional)</Text>
+          <Text style={styles.sectionLabel}>{t('common_notes_optional')}</Text>
           <TextInput
             style={[styles.textInput, styles.textArea]}
-            placeholder="Contoh: Tarik tunai ATM, Top up GoPay dari BCA"
+            placeholder={t('transfer_modal_notes_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={notes}
             onChangeText={setNotes}
@@ -258,7 +260,7 @@ export default function TransferFundsModal() {
           style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
           onPress={handleSubmit}>
           <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
-          <Text style={styles.submitBtnText}>Proses Transfer</Text>
+          <Text style={styles.submitBtnText}>{t('transfer_modal_btn_confirm')}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

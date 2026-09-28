@@ -13,7 +13,7 @@ interface InvestmentItemProps {
 
 export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
   const isProfit = item.pnl >= 0;
-  const { t, formatDateShort } = useI18n();
+  const { t, language, formatDateShort } = useI18n();
 
   const instrumentMap: Record<string, { label: string; icon: any; color: string }> = {
     saham: { label: t('inst_saham'), icon: 'business-outline', color: '#3B82F6' },
@@ -59,7 +59,7 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
           />
           <Text style={[styles.pnlText, { color: isProfit ? colors.incomeDark : colors.expenseDark }]}>
             {isProfit ? '+' : ''}
-            {formatCurrency(item.pnl)} ({isProfit ? '+' : ''}
+            {formatCurrency(item.pnl, language)} ({isProfit ? '+' : ''}
             {item.pnl_percentage.toFixed(1)}%)
           </Text>
         </View>
@@ -75,11 +75,11 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
         <View style={styles.priceCol}>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>{t('inv_buy_label')}</Text>
-            <Text style={styles.priceValue}>{formatCurrency(item.buy_price)}</Text>
+            <Text style={styles.priceValue}>{formatCurrency(item.buy_price, language)}</Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>{t('inv_sell_label')}</Text>
-            <Text style={styles.priceValue}>{formatCurrency(item.sell_price)}</Text>
+            <Text style={styles.priceValue}>{formatCurrency(item.sell_price, language)}</Text>
           </View>
         </View>
       </View>

@@ -1,43 +1,11 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { Debt } from '@/types';
+import { translate } from '@/i18n';
+import type { Language } from '@/i18n/types';
 import { formatCurrency } from './format-currency';
 
-export type NotifLang = 'en' | 'id' | 'zh';
-
-const NOTIF_TEXTS: Record<NotifLang, {
-  dailyTitle: string;
-  dailyBody: string;
-  recTitle: string;
-  recBody: (person: string, amount: string) => string;
-  payTitle: string;
-  payBody: (person: string, amount: string) => string;
-}> = {
-  en: {
-    dailyTitle: "🌸 Record Today's Expenses",
-    dailyBody: 'Take 1 minute to log your expenses today and keep your cash flow clear!',
-    recTitle: '⏰ Loan Collection Due Today',
-    recBody: (person, amount) => `Today is the due date to collect ${amount} from ${person}!`,
-    payTitle: '⏰ Debt Payment Due Today',
-    payBody: (person, amount) => `Today is the due date to pay ${amount} to ${person}.`,
-  },
-  id: {
-    dailyTitle: '🌸 Catat Belanjaan Hari Ini',
-    dailyBody: 'Luangkan 1 menit untuk mencatat pengeluaran Anda hari ini agar cashflow tetap rapi!',
-    recTitle: '⏰ Jatuh Tempo Tagihan Piutang',
-    recBody: (person, amount) => `Hari ini batas waktu penagihan ke ${person} sebesar ${amount}!`,
-    payTitle: '⏰ Jatuh Tempo Pembayaran Hutang',
-    payBody: (person, amount) => `Hari ini batas waktu pembayaran hutang ke ${person} sebesar ${amount}.`,
-  },
-  zh: {
-    dailyTitle: '🌸 记录今天的开支',
-    dailyBody: '花1分钟记录今天的收支，保持财务清爽有序！',
-    recTitle: '⏰ 应收账款到期提醒',
-    recBody: (person, amount) => `今天是向 ${person} 收回款项 ${amount} 的约定到期日！`,
-    payTitle: '⏰ 还款到期提醒',
-    payBody: (person, amount) => `今天是向 ${person} 偿还欠款 ${amount} 的约定到期日。`,
-  },
-};
+export type NotifLang = Language;
 
 // Configure notification handling behavior
 Notifications.setNotificationHandler({
@@ -50,7 +18,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function requestNotificationPermissions(): Promise<boolean> {
+export async function requestNotificationPermissions(lang: NotifLang = 'en'): Promise<boolean> {
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -66,7 +34,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Cashflower Reminder',
+        name: translate(lang, 'notif_channel_name'),
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#0D9488',
@@ -86,19 +54,17 @@ export async function scheduleDailyReminder(
   lang: NotifLang = 'en'
 ): Promise<void> {
   try {
-    const granted = await requestNotificationPermissions();
+    const granted = await requestNotificationPermissions(lang);
     if (!granted) return;
 
     // Cancel existing daily reminders
     await cancelDailyReminder();
 
-    const texts = NOTIF_TEXTS[lang] || NOTIF_TEXTS.en;
-
     await Notifications.scheduleNotificationAsync({
       identifier: 'daily_finance_reminder',
       content: {
-        title: texts.dailyTitle,
-        body: texts.dailyBody,
+        title: translate(lang, 'notif_daily_title'),
+        body: translate(lang, 'notif_daily_body'),
         sound: true,
       },
       trigger: {
@@ -124,7 +90,7 @@ export async function scheduleDebtReminder(debt: Debt, lang: NotifLang = 'en'): 
   try {
     if (!debt.due_date || debt.is_paid === 1) return;
 
-    const granted = await requestNotificationPermissions();
+    const granted = await requestNotificationPermissions(lang);
     if (!granted) return;
 
     const dueDateObj = new Date(debt.due_date + 'T09:00:00');
@@ -133,12 +99,17 @@ export async function scheduleDebtReminder(debt: Debt, lang: NotifLang = 'en'): 
     const identifier = `debt_reminder_${debt.id}`;
     await Notifications.cancelScheduledNotificationAsync(identifier);
 
-    const texts = NOTIF_TEXTS[lang] || NOTIF_TEXTS.en;
     const isReceivable = debt.type === 'receivable';
-    const title = isReceivable ? texts.recTitle : texts.payTitle;
-    const body = isReceivable
-      ? texts.recBody(debt.person_name, formatCurrency(debt.amount))
-      : texts.payBody(debt.person_name, formatCurrency(debt.amount));
+    const amount = formatCurrency(debt.amount, lang);
+    const title = translate(
+      lang,
+      isReceivable ? 'notif_debt_receivable_title' : 'notif_debt_payable_title'
+    );
+    const body = translate(
+      lang,
+      isReceivable ? 'notif_debt_receivable_body' : 'notif_debt_payable_body',
+      { person: debt.person_name, amount }
+    );
 
     await Notifications.scheduleNotificationAsync({
       identifier,
@@ -154,5 +125,13 @@ export async function scheduleDebtReminder(debt: Debt, lang: NotifLang = 'en'): 
     });
   } catch (err) {
     console.warn('Error scheduling debt reminder:', err);
+  }
+}
+
+export async function cancelDebtReminder(debtId: string): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(`debt_reminder_${debtId}`);
+  } catch (err) {
+    console.warn('Error canceling debt reminder:', err);
   }
 }

@@ -21,7 +21,7 @@ interface CategoryDonutChartProps {
 }
 
 export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   // Defensive checks
   const safeData = Array.isArray(data) ? data : [];
@@ -142,7 +142,7 @@ export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartPro
               <View style={styles.catInfo}>
                 <View style={styles.catHeader}>
                   <Text style={styles.catName} numberOfLines={1}>
-                    {item.name || 'Kategori'}
+                    {item.name || t('common_others')}
                   </Text>
                   <Text style={styles.catPercent}>{itemPct.toFixed(1)}%</Text>
                 </View>
@@ -160,7 +160,7 @@ export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartPro
                   />
                 </View>
 
-                <Text style={styles.catTotal}>{formatCurrency(item.total || 0)}</Text>
+                <Text style={styles.catTotal}>{formatCurrency(item.total || 0, language)}</Text>
               </View>
             </View>
           );

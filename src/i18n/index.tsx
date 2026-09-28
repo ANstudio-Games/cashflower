@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Language, LanguageOption, TranslationDictionary } from './types';
+import type { Transaction } from '@/types';
 import { en } from './locales/en';
 import { id } from './locales/id';
 import { zh } from './locales/zh';
@@ -18,6 +19,29 @@ const dictionaries: Record<Language, TranslationDictionary> = {
   id,
   zh,
 };
+
+export const LANGUAGE_LOCALES: Record<Language, string> = {
+  en: 'en-US',
+  id: 'id-ID',
+  zh: 'zh-CN',
+};
+
+export function translate(
+  language: Language,
+  key: string,
+  params?: Record<string, string | number>
+): string {
+  const dict = dictionaries[language] || dictionaries.en;
+  let template = dict[key] ?? dictionaries.en[key] ?? key;
+
+  if (params) {
+    Object.entries(params).forEach(([paramKey, val]) => {
+      template = template.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(val));
+    });
+  }
+
+  return template;
+}
 
 const MONTHS_SHORT: Record<Language, string[]> = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -52,6 +76,156 @@ const DAYS_FULL: Record<Language, string[]> = {
   zh: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
 };
 
+export function formatDateShortForLanguage(isoDate: string, language: Language): string {
+  if (!isoDate) return '';
+  const parts = isoDate.split('-');
+  if (parts.length !== 3) return isoDate;
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+
+  if (language === 'zh') {
+    return `${year}年${monthIdx + 1}月${day}日`;
+  }
+  const monthName = MONTHS_SHORT[language]?.[monthIdx] || MONTHS_SHORT.en[monthIdx] || '';
+  return `${day} ${monthName} ${year}`;
+}
+
+export function formatDateFullForLanguage(isoDate: string, language: Language): string {
+  if (!isoDate) return '';
+  const d = new Date(isoDate + 'T00:00:00');
+  if (isNaN(d.getTime())) return isoDate;
+  const dayName = DAYS_FULL[language]?.[d.getDay()] || DAYS_FULL.en[d.getDay()];
+  const day = d.getDate();
+  const monthIdx = d.getMonth();
+  const year = d.getFullYear();
+
+  if (language === 'zh') {
+    return `${year}年${monthIdx + 1}月${day}日 ${dayName}`;
+  }
+  const month = MONTHS_FULL[language]?.[monthIdx] || MONTHS_FULL.en[monthIdx];
+  return `${dayName}, ${day} ${month} ${year}`;
+}
+
+export function formatMonthYearForLanguage(isoDate: string, language: Language): string {
+  if (!isoDate) return '';
+  const parts = isoDate.split('-');
+  if (parts.length < 2) return isoDate;
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+
+  if (language === 'zh') {
+    return `${year}年${monthIdx + 1}月`;
+  }
+  const month = MONTHS_FULL[language]?.[monthIdx] || MONTHS_FULL.en[monthIdx];
+  return `${month} ${year}`;
+}
+
+export function formatDateTimeForLanguage(date: Date, language: Language): string {
+  try {
+    return date.toLocaleString(LANGUAGE_LOCALES[language] || LANGUAGE_LOCALES.en, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
+    });
+  } catch {
+    return date.toISOString();
+  }
+}
+
+export function getCategoryNameForLanguage(
+  language: Language,
+  category?: { id?: string | null; name?: string; is_default?: number } | null
+): string {
+  if (!category) return '';
+  if (category.id && (category.is_default === 1 || category.id.startsWith('cat_'))) {
+    const translated = (dictionaries[language] || dictionaries.en)[category.id];
+    if (translated) return translated;
+  }
+  return category.name || '';
+}
+
+const BUILT_IN_WALLET_NAMES: Record<string, string[]> = {
+  wallet_cash: ['Uang Tunai', 'Cash', '现金'],
+  wallet_bank: ['Rekening Bank', 'Bank Account', '银行账户'],
+  wallet_ewallet: ['E-Wallet', '电子钱包'],
+};
+
+export function getWalletNameForLanguage(
+  language: Language,
+  wallet?: { id?: string | null; name?: string } | null
+): string {
+  if (!wallet) return '';
+  const builtInNames = wallet.id ? BUILT_IN_WALLET_NAMES[wallet.id] : undefined;
+  if (builtInNames && (!wallet.name || builtInNames.includes(wallet.name))) {
+    const translated = (dictionaries[language] || dictionaries.en)[wallet.id!];
+    if (translated) return translated;
+  }
+  return wallet.name || '';
+}
+
+function isPlanPurchaseTransaction(transaction: Transaction): boolean {
+  if (transaction.type !== 'expense') return false;
+  if (transaction.generated_kind === 'plan_purchase' || transaction.source_plan_id) return true;
+  return (
+    transaction.title.startsWith('Beli: ') &&
+    !!transaction.notes?.startsWith('Target impian tercapai.')
+  );
+}
+
+function getPlanPurchaseTitle(transaction: Transaction): string {
+  if (transaction.source_plan_id) return transaction.title;
+  if (transaction.generated_kind === 'plan_purchase' && !transaction.title.startsWith('Beli: ')) {
+    return transaction.title;
+  }
+  return transaction.title.replace(/^Beli:\s*/, '');
+}
+
+function getPlanPurchaseNotes(transaction: Transaction): string {
+  if (transaction.source_plan_id) return transaction.notes || '';
+  if (transaction.generated_kind === 'plan_purchase' && !transaction.notes?.startsWith('Target impian tercapai.')) {
+    return transaction.notes || '';
+  }
+  return (transaction.notes || '').replace(/^Target impian tercapai\.\s*/, '');
+}
+
+export function getTransactionTitleForLanguage(
+  transaction: Transaction,
+  language: Language
+): string {
+  if (transaction.type === 'transfer') {
+    const source = getWalletNameForLanguage(language, {
+      id: transaction.wallet_id,
+      name: transaction.wallet_name,
+    }) || translate(language, 'common_wallet');
+    const destination = getWalletNameForLanguage(language, {
+      id: transaction.destination_wallet_id,
+      name: transaction.destination_wallet_name,
+    }) || translate(language, 'common_destination');
+    return translate(language, 'tx_transfer_title', { source, destination });
+  }
+  if (isPlanPurchaseTransaction(transaction)) {
+    return translate(language, 'tx_plan_purchase_title', {
+      title: getPlanPurchaseTitle(transaction),
+    });
+  }
+  return transaction.title;
+}
+
+export function getTransactionNotesForLanguage(
+  transaction: Transaction,
+  language: Language
+): string {
+  if (!isPlanPurchaseTransaction(transaction)) return transaction.notes || '';
+  const planNotes = getPlanPurchaseNotes(transaction);
+  return planNotes
+    ? translate(language, 'tx_plan_purchase_note', { notes: planNotes })
+    : translate(language, 'tx_plan_purchase_completed');
+}
+
 interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => Promise<void>;
@@ -63,6 +237,9 @@ interface I18nContextType {
   getMonthNames: () => string[];
   getDayNames: () => string[];
   getCategoryName: (cat?: { id?: string | null; name?: string; is_default?: number } | null) => string;
+  getWalletName: (wallet?: { id?: string | null; name?: string } | null) => string;
+  getTransactionTitle: (transaction: Transaction) => string;
+  getTransactionNotes: (transaction: Transaction) => string;
 }
 
 const I18nContext = createContext<I18nContextType | null>(null);
@@ -111,72 +288,23 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   );
 
   const t = useCallback(
-    (key: string, params?: Record<string, string | number>): string => {
-      const dict = dictionaries[language] || dictionaries.en;
-      let template = dict[key] ?? dictionaries.en[key] ?? key;
-
-      if (params) {
-        Object.entries(params).forEach(([paramKey, val]) => {
-          template = template.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(val));
-        });
-      }
-
-      return template;
-    },
+    (key: string, params?: Record<string, string | number>): string =>
+      translate(language, key, params),
     [language]
   );
 
   const formatDateShort = useCallback(
-    (isoDate: string): string => {
-      if (!isoDate) return '';
-      const parts = isoDate.split('-');
-      if (parts.length !== 3) return isoDate;
-      const year = parts[0];
-      const monthIdx = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-
-      if (language === 'zh') {
-        return `${year}年${monthIdx + 1}月${day}日`;
-      }
-      const monthName = MONTHS_SHORT[language]?.[monthIdx] || MONTHS_SHORT.en[monthIdx] || '';
-      return `${day} ${monthName} ${year}`;
-    },
+    (isoDate: string): string => formatDateShortForLanguage(isoDate, language),
     [language]
   );
 
   const formatDateFull = useCallback(
-    (isoDate: string): string => {
-      if (!isoDate) return '';
-      const d = new Date(isoDate + 'T00:00:00');
-      if (isNaN(d.getTime())) return isoDate;
-      const dayName = DAYS_FULL[language]?.[d.getDay()] || DAYS_FULL.en[d.getDay()];
-      const day = d.getDate();
-      const monthIdx = d.getMonth();
-      const year = d.getFullYear();
-
-      if (language === 'zh') {
-        return `${year}年${monthIdx + 1}月${day}日 ${dayName}`;
-      }
-      const month = MONTHS_FULL[language]?.[monthIdx] || MONTHS_FULL.en[monthIdx];
-      return `${dayName}, ${day} ${month} ${year}`;
-    },
+    (isoDate: string): string => formatDateFullForLanguage(isoDate, language),
     [language]
   );
 
   const formatMonthYear = useCallback(
-    (isoDate: string): string => {
-      if (!isoDate) return '';
-      const parts = isoDate.split('-');
-      if (parts.length < 2) return isoDate;
-      const year = parts[0];
-      const monthIdx = parseInt(parts[1], 10) - 1;
-
-      if (language === 'zh') {
-        return `${year}年${monthIdx + 1}月`;
-      }
-      const month = MONTHS_FULL[language]?.[monthIdx] || MONTHS_FULL.en[monthIdx];
-      return `${month} ${year}`;
-    },
+    (isoDate: string): string => formatMonthYearForLanguage(isoDate, language),
     [language]
   );
 
@@ -212,14 +340,24 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, [language]);
 
   const getCategoryName = useCallback(
-    (cat?: { id?: string | null; name?: string; is_default?: number } | null): string => {
-      if (!cat) return '';
-      if (cat.id && (cat.is_default === 1 || cat.id.startsWith('cat_'))) {
-        const dict = dictionaries[language] || dictionaries.en;
-        if (dict[cat.id]) return dict[cat.id];
-      }
-      return cat.name || '';
-    },
+    (cat?: { id?: string | null; name?: string; is_default?: number } | null): string =>
+      getCategoryNameForLanguage(language, cat),
+    [language]
+  );
+
+  const getWalletName = useCallback(
+    (wallet?: { id?: string | null; name?: string } | null): string =>
+      getWalletNameForLanguage(language, wallet),
+    [language]
+  );
+
+  const getTransactionTitle = useCallback(
+    (transaction: Transaction): string => getTransactionTitleForLanguage(transaction, language),
+    [language]
+  );
+
+  const getTransactionNotes = useCallback(
+    (transaction: Transaction): string => getTransactionNotesForLanguage(transaction, language),
     [language]
   );
 
@@ -235,6 +373,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       getMonthNames,
       getDayNames,
       getCategoryName,
+      getWalletName,
+      getTransactionTitle,
+      getTransactionNotes,
     }),
     [
       language,
@@ -247,8 +388,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       getMonthNames,
       getDayNames,
       getCategoryName,
+      getWalletName,
+      getTransactionTitle,
+      getTransactionNotes,
     ]
   );
+
+  if (!isLoaded) return null;
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

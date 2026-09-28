@@ -29,7 +29,7 @@ export default function AddTransactionModal() {
   const isEditing = !!params.id;
 
   const { categories, transactions, wallets, createTransaction, editTransaction, isMultiWalletEnabled } = useFinance();
-  const { t, getCategoryName } = useI18n();
+  const { t, getCategoryName, getWalletName, language } = useI18n();
 
   const [type, setType] = useState<TransactionType>('expense');
   const [rawAmount, setRawAmount] = useState<string>('');
@@ -163,7 +163,7 @@ export default function AddTransactionModal() {
               <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
             </View>
             <Text style={styles.transferBannerText}>
-              Mau pindah saldo antar rekening/dompet? Buka Transfer ➔
+              {t('tx_modal_transfer_banner')}
             </Text>
           </Pressable>
         )}
@@ -207,7 +207,7 @@ export default function AddTransactionModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawAmount ? parseInt(rawAmount, 10).toLocaleString('id-ID') : ''}
+              value={rawAmount}
               onChangeText={handleAmountChange}
               autoFocus={!isEditing}
             />
@@ -253,10 +253,10 @@ export default function AddTransactionModal() {
                           isSelected && { color: w.color, fontWeight: '700' },
                         ]}
                         numberOfLines={1}>
-                        {w.name}
+                        {getWalletName(w)}
                       </Text>
                       <Text style={styles.walletSelectBalance} numberOfLines={1}>
-                        {formatCurrency(w.balance || 0)}
+                        {formatCurrency(w.balance || 0, language)}
                       </Text>
                     </View>
                   </Pressable>

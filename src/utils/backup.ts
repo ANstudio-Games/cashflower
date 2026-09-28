@@ -7,7 +7,7 @@ import { BackupData } from '@/types';
 
 export async function backupToGoogleDriveOrShare(
   db: SQLite.SQLiteDatabase,
-  dialogTitle: string = 'Save to Google Drive or Share Backup'
+  dialogTitle: string
 ): Promise<boolean> {
   try {
     const data = await exportAllData(db);
@@ -33,7 +33,7 @@ export async function backupToGoogleDriveOrShare(
       });
       return true;
     } else {
-      throw new Error('File sharing is not available on this device.');
+      throw new Error('sharing_unavailable');
     }
   } catch (err: any) {
     console.error('Backup error:', err);
@@ -61,7 +61,7 @@ export async function restoreFromBackupFile(db: SQLite.SQLiteDatabase): Promise<
 
     // Validate that it is a cashflower backup
     if (!backupData || !Array.isArray(backupData.transactions) || !Array.isArray(backupData.categories)) {
-      throw new Error('Format file cadangan tidak valid atau rusak.');
+      throw new Error('invalid_backup');
     }
 
     await importAllData(db, backupData);

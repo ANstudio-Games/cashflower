@@ -14,7 +14,7 @@ interface BalanceCardProps {
 
 export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: BalanceCardProps) {
   const isPositive = balance >= 0;
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   return (
     <View style={[styles.card, shadowStyles.md]}>
@@ -22,7 +22,7 @@ export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: 
         <View>
           <Text style={styles.label}>{t('home_total_balance')}</Text>
           <Text style={[styles.balanceAmount, !isPositive && styles.negativeBalance]}>
-            {formatCurrency(balance)}
+            {formatCurrency(balance, language)}
           </Text>
         </View>
         <Pressable
@@ -44,7 +44,7 @@ export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: 
           <View style={styles.statTexts}>
             <Text style={styles.statLabel}>{t('common_income')}</Text>
             <Text style={[styles.statValue, { color: colors.incomeDark }]}>
-              {formatCurrency(totalIncome)}
+              {formatCurrency(totalIncome, language)}
             </Text>
           </View>
         </View>
@@ -59,7 +59,7 @@ export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: 
           <View style={styles.statTexts}>
             <Text style={styles.statLabel}>{t('common_expense')}</Text>
             <Text style={[styles.statValue, { color: colors.expenseDark }]}>
-              {formatCurrency(totalExpense)}
+              {formatCurrency(totalExpense, language)}
             </Text>
           </View>
         </View>

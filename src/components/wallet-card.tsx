@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Wallet } from '@/types';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
+import { useI18n } from '@/i18n';
 
 interface WalletCardProps {
   wallet: Wallet;
@@ -12,6 +13,7 @@ interface WalletCardProps {
 }
 
 export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps) {
+  const { t, language, getWalletName } = useI18n();
   const balance = wallet.balance ?? wallet.initial_balance ?? 0;
   const isNegative = balance < 0;
   const isDefault = wallet.is_default === 1;
@@ -19,15 +21,15 @@ export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'cash':
-        return 'Tunai';
+        return t('wallet_type_cash');
       case 'bank':
-        return 'Bank';
+        return t('wallet_type_bank');
       case 'ewallet':
-        return 'E-Wallet';
+        return t('wallet_type_ewallet');
       case 'savings':
-        return 'Tabungan';
+        return t('wallet_type_savings');
       default:
-        return 'Lainnya';
+        return t('wallet_type_other');
     }
   };
 
@@ -51,7 +53,7 @@ export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps
           {isDefault && (
             <View style={styles.defaultBadge}>
               <Ionicons name="star" size={9} color="#D97706" />
-              <Text style={styles.defaultBadgeText}>Utama</Text>
+              <Text style={styles.defaultBadgeText}>{t('wallet_badge_default')}</Text>
             </View>
           )}
           <View
@@ -69,12 +71,12 @@ export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps
       {/* Wallet Name & Balance */}
       <View style={styles.bottomSection}>
         <Text style={styles.walletName} numberOfLines={1}>
-          {wallet.name}
+          {getWalletName(wallet)}
         </Text>
         <Text
           style={[styles.walletBalance, isNegative && styles.negativeBalance]}
           numberOfLines={1}>
-          {formatCurrency(balance)}
+          {formatCurrency(balance, language)}
         </Text>
       </View>
     </Pressable>

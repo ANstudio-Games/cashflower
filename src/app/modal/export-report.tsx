@@ -16,9 +16,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useI18n } from '@/i18n';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
-import { formatDateShort, getTodayISO, formatMonthYear } from '@/utils/format-date';
+import { getTodayISO } from '@/utils/format-date';
 import { exportTransactionsToPdf } from '@/utils/report-pdf';
 import { exportTransactionsToCsv } from '@/utils/report-csv';
 
@@ -28,6 +29,12 @@ type ExportFormat = 'pdf' | 'csv';
 export default function ExportReportModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const {
+    language,
+    t,
+    formatDateShort,
+    formatMonthYear,
+  } = useI18n();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { transactions } = useFinance();
 
@@ -78,7 +85,10 @@ export default function ExportReportModal() {
       return {
         startDate: start,
         endDate: end,
-        periodLabel: `3 Bulan Terakhir (${formatDateShort(start)} - ${formatDateShort(end)})`,
+        periodLabel: t('export_period_3_months_label', {
+          start: formatDateShort(start),
+          end: formatDateShort(end),
+        }),
       };
     }
 
@@ -86,19 +96,19 @@ export default function ExportReportModal() {
       return {
         startDate: '',
         endDate: '',
-        periodLabel: 'Seluruh Riwayat Transaksi',
+        periodLabel: t('export_period_all_label'),
       };
     }
 
     // Custom
-    const s = customStart.trim() || 'Awal Catatan';
+    const s = customStart.trim() || '-';
     const e = customEnd.trim() || getTodayISO();
     return {
       startDate: customStart.trim(),
       endDate: customEnd.trim(),
-      periodLabel: `${s} s/d ${e}`,
+      periodLabel: `${s} - ${e}`,
     };
-  }, [period, customStart, customEnd]);
+  }, [period, customStart, customEnd, t, formatDateShort, formatMonthYear]);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
@@ -133,15 +143,16 @@ export default function ExportReportModal() {
 
   const handleExport = async () => {
     if (filteredTransactions.length === 0) {
-      Alert.alert('Data Kosong', 'Tidak ada transaksi yang sesuai dengan filter periode ini untuk diekspor.');
+      Alert.alert(t('export_empty_title'), t('export_empty_msg'));
       return;
     }
 
     try {
       setIsExporting(true);
       const meta = {
-        businessName: businessName.trim() || 'Cashflower Accounting',
-        reporterName: reporterName.trim() || 'Staf / Kasir',
+        language,
+        businessName: businessName.trim() || t('export_default_business_name'),
+        reporterName: reporterName.trim() || t('export_default_reporter_name'),
         periodLabel,
         startDate,
         endDate,
@@ -154,7 +165,10 @@ export default function ExportReportModal() {
       }
     } catch (err: any) {
       console.error('Export error:', err);
-      Alert.alert('Gagal Mengekspor', err?.message || 'Terjadi kesalahan saat membuat dokumen laporan.');
+      const message = err?.message === 'sharing_unavailable'
+        ? t('backup_share_unavailable')
+        : t('export_err_default');
+      Alert.alert(t('export_err_title'), message);
     } finally {
       setIsExporting(false);
     }
@@ -170,7 +184,7 @@ export default function ExportReportModal() {
           <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Ekspor Laporan Keuangan</Text>
+          <Text style={styles.headerTitle}>{t('export_header_title')}</Text>
           <View style={{ width: 36 }} />
         </View>
 
@@ -180,7 +194,7 @@ export default function ExportReportModal() {
           keyboardShouldPersistTaps="handled">
           
           {/* Format Selector */}
-          <Text style={styles.sectionTitle}>PILIH FORMAT LAPORAN</Text>
+          <Text style={styles.sectionTitle}>{t('export_format_section')}</Text>
           <View style={styles.formatRow}>
             <Pressable
               style={[
@@ -192,8 +206,8 @@ export default function ExportReportModal() {
               <View style={[styles.formatIconWrap, { backgroundColor: '#FEF2F2' }]}>
                 <Ionicons name="document-text" size={26} color="#DC2626" />
               </View>
-              <Text style={styles.formatTitle}>Dokumen PDF</Text>
-              <Text style={styles.formatDesc}>Laporan resmi siap print, kop surat, rincian kategori & lembar tanda tangan.</Text>
+              <Text style={styles.formatTitle}>{t('export_pdf_title')}</Text>
+              <Text style={styles.formatDesc}>{t('export_pdf_desc')}</Text>
               {format === 'pdf' && (
                 <View style={styles.checkBadge}>
                   <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
@@ -211,8 +225,8 @@ export default function ExportReportModal() {
               <View style={[styles.formatIconWrap, { backgroundColor: '#ECFDF5' }]}>
                 <Ionicons name="grid" size={26} color="#059669" />
               </View>
-              <Text style={styles.formatTitle}>Excel / CSV</Text>
-              <Text style={styles.formatDesc}>Format tabel data mentah yang dapat diolah di Microsoft Excel & Google Sheets.</Text>
+              <Text style={styles.formatTitle}>{t('export_csv_title')}</Text>
+              <Text style={styles.formatDesc}>{t('export_csv_desc')}</Text>
               {format === 'csv' && (
                 <View style={styles.checkBadge}>
                   <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
@@ -222,14 +236,14 @@ export default function ExportReportModal() {
           </View>
 
           {/* Period Selector */}
-          <Text style={styles.sectionTitle}>PERIODE LAPORAN</Text>
+          <Text style={styles.sectionTitle}>{t('export_period_section')}</Text>
           <View style={styles.presetWrap}>
             {[
-              { id: 'this_month', label: 'Bulan Ini' },
-              { id: 'last_month', label: 'Bulan Lalu' },
-              { id: 'last_3_months', label: '3 Bulan' },
-              { id: 'all', label: 'Semua' },
-              { id: 'custom', label: 'Kustom' },
+              { id: 'this_month', label: t('export_period_this_month') },
+              { id: 'last_month', label: t('export_period_last_month') },
+              { id: 'last_3_months', label: t('export_period_last_3_months') },
+              { id: 'all', label: t('export_period_all') },
+              { id: 'custom', label: t('export_period_custom') },
             ].map((p) => {
               const active = period === p.id;
               return (
@@ -249,10 +263,10 @@ export default function ExportReportModal() {
           {period === 'custom' && (
             <View style={styles.customDateBox}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>Tanggal Mulai (YYYY-MM-DD)</Text>
+                <Text style={styles.inputLabel}>{t('export_custom_start')}</Text>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="Contoh: 2026-09-01"
+                  placeholder={t('export_custom_start_placeholder')}
                   placeholderTextColor={colors.textMuted}
                   value={customStart}
                   onChangeText={setCustomStart}
@@ -261,10 +275,10 @@ export default function ExportReportModal() {
               </View>
               <View style={{ width: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>Tanggal Akhir (YYYY-MM-DD)</Text>
+                <Text style={styles.inputLabel}>{t('export_custom_end')}</Text>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="Contoh: 2026-09-30"
+                  placeholder={t('export_custom_end_placeholder')}
                   placeholderTextColor={colors.textMuted}
                   value={customEnd}
                   onChangeText={setCustomEnd}
@@ -275,21 +289,21 @@ export default function ExportReportModal() {
           )}
 
           {/* Filter Type */}
-          <Text style={styles.sectionTitle}>JENIS TRANSAKSI</Text>
+          <Text style={styles.sectionTitle}>{t('export_type_section')}</Text>
           <View style={styles.typeRow}>
             {[
-              { id: 'all', label: 'Semua (Masuk & Keluar)' },
-              { id: 'expense', label: 'Hanya Pengeluaran' },
-              { id: 'income', label: 'Hanya Pemasukan' },
-            ].map((t) => {
-              const active = filterType === t.id;
+              { id: 'all', label: t('export_type_all') },
+              { id: 'expense', label: t('export_type_expense') },
+              { id: 'income', label: t('export_type_income') },
+            ].map((item) => {
+              const active = filterType === item.id;
               return (
                 <Pressable
-                  key={t.id}
+                  key={item.id}
                   style={[styles.typeChip, active && styles.typeChipActive]}
-                  onPress={() => setFilterType(t.id as any)}>
+                  onPress={() => setFilterType(item.id as any)}>
                   <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
-                    {t.label}
+                    {item.label}
                   </Text>
                 </Pressable>
               );
@@ -297,23 +311,23 @@ export default function ExportReportModal() {
           </View>
 
           {/* Metadata Inputs */}
-          <Text style={styles.sectionTitle}>INFORMASI KOP LAPORAN (OPSIONAL)</Text>
+          <Text style={styles.sectionTitle}>{t('export_meta_section')}</Text>
           <View style={styles.metaCard}>
             <View style={styles.metaField}>
-              <Text style={styles.inputLabel}>Nama Usaha / Toko / Proyek</Text>
+              <Text style={styles.inputLabel}>{t('export_meta_business_label')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Contoh: Toko Berkah / Kasir Cabang 1"
+                placeholder={t('export_meta_business_placeholder')}
                 placeholderTextColor={colors.textMuted}
                 value={businessName}
                 onChangeText={setBusinessName}
               />
             </View>
             <View style={styles.metaField}>
-              <Text style={styles.inputLabel}>Nama Pelapor / Kasir</Text>
+              <Text style={styles.inputLabel}>{t('export_meta_reporter_label')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Contoh: Budi (Kasir)"
+                placeholder={t('export_meta_reporter_placeholder')}
                 placeholderTextColor={colors.textMuted}
                 value={reporterName}
                 onChangeText={setReporterName}
@@ -322,12 +336,12 @@ export default function ExportReportModal() {
           </View>
 
           {/* Live Summary Preview */}
-          <Text style={styles.sectionTitle}>RINGKASAN DATA YANG DIEKSPOR</Text>
+          <Text style={styles.sectionTitle}>{t('export_summary_section')}</Text>
           <View style={[styles.summaryCard, shadowStyles.sm]}>
             <View style={styles.summaryTop}>
               <View>
                 <Text style={styles.summaryPeriodLabel}>{periodLabel}</Text>
-                <Text style={styles.summaryCount}>{summary.count} Transaksi Terpilih</Text>
+                <Text style={styles.summaryCount}>{t('export_summary_selected', { count: summary.count })}</Text>
               </View>
               <View
                 style={[
@@ -339,7 +353,7 @@ export default function ExportReportModal() {
                     styles.badgeBalanceText,
                     { color: summary.balance >= 0 ? colors.primaryDark : colors.expenseDark },
                   ]}>
-                  {summary.balance >= 0 ? 'Surplus' : 'Defisit'}
+                  {summary.balance >= 0 ? t('export_badge_surplus') : t('export_badge_deficit')}
                 </Text>
               </View>
             </View>
@@ -348,16 +362,16 @@ export default function ExportReportModal() {
 
             <View style={styles.summaryStatsRow}>
               <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Total Pemasukan</Text>
+                <Text style={styles.statLabel}>{t('export_stat_total_income')}</Text>
                 <Text style={[styles.statVal, { color: colors.income }]}>
-                  {formatCurrency(summary.income)}
+                  {formatCurrency(summary.income, language)}
                 </Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Total Pengeluaran</Text>
+                <Text style={styles.statLabel}>{t('export_stat_total_expense')}</Text>
                 <Text style={[styles.statVal, { color: colors.expense }]}>
-                  {formatCurrency(summary.expense)}
+                  {formatCurrency(summary.expense, language)}
                 </Text>
               </View>
             </View>
@@ -382,14 +396,14 @@ export default function ExportReportModal() {
                   color="#FFFFFF"
                 />
                 <Text style={styles.exportBtnText}>
-                  {format === 'pdf' ? 'Cetak & Bagikan Laporan PDF' : 'Ekspor & Bagikan Spreadsheet CSV'}
+                  {format === 'pdf' ? t('export_btn_pdf') : t('export_btn_csv')}
                 </Text>
               </>
             )}
           </Pressable>
 
           <Text style={styles.helperNotice}>
-            💡 Dokumen akan diproses secara instan di perangkat lokal tanpa internet, dan dapat langsung Anda kirim via WhatsApp, email, atau simpan ke Google Drive.
+            {t('export_helper_notice')}
           </Text>
 
           <View style={{ height: 40 }} />

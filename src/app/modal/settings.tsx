@@ -16,7 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { useI18n, LANGUAGES, Language } from '@/i18n';
 import { colors } from '@/theme/colors';
-import { scheduleDailyReminder, cancelDailyReminder } from '@/utils/notifications';
+import {
+  scheduleDailyReminder,
+  cancelDailyReminder,
+  scheduleDebtReminder,
+  cancelDebtReminder,
+} from '@/utils/notifications';
 
 export default function SettingsModal() {
   const router = useRouter();
@@ -45,7 +50,10 @@ export default function SettingsModal() {
       setIsBackingUp(true);
       await backupData(t('backup_dialog_title'));
     } catch (err: any) {
-      Alert.alert(t('settings_backup_err_title'), err.message || t('settings_backup_err_msg'));
+      const message = err?.message === 'sharing_unavailable'
+        ? t('backup_share_unavailable')
+        : t('settings_backup_err_msg');
+      Alert.alert(t('settings_backup_err_title'), message);
     } finally {
       setIsBackingUp(false);
     }
@@ -70,7 +78,10 @@ export default function SettingsModal() {
                 );
               }
             } catch (err: any) {
-              Alert.alert(t('settings_restore_err_title'), err.message || t('settings_restore_err_msg'));
+              const message = err?.message === 'invalid_backup'
+                ? t('backup_invalid_format')
+                : t('settings_restore_err_msg');
+              Alert.alert(t('settings_restore_err_title'), message);
             } finally {
               setIsRestoring(false);
             }
@@ -87,6 +98,20 @@ export default function SettingsModal() {
       Alert.alert(t('settings_reminder_active'), t('settings_reminder_daily_alert'));
     } else {
       await cancelDailyReminder();
+    }
+  };
+
+  const handleLanguageChange = async (nextLanguage: Language) => {
+    await setLanguage(nextLanguage);
+    if (dailyReminderEnabled) {
+      await scheduleDailyReminder(20, 0, nextLanguage);
+    } else {
+      await cancelDailyReminder();
+    }
+    if (debtReminderEnabled) {
+      await Promise.all(debts.map((debt) => scheduleDebtReminder(debt, nextLanguage)));
+    } else {
+      await Promise.all(debts.map((debt) => cancelDebtReminder(debt.id)));
     }
   };
 
@@ -116,7 +141,7 @@ export default function SettingsModal() {
                     isSelected && styles.languageRowSelected,
                     pressed && { opacity: 0.8 },
                   ]}
-                  onPress={() => setLanguage(langItem.code)}>
+                    onPress={() => handleLanguageChange(langItem.code)}>
                   <View style={[styles.flagWrap, isSelected && styles.flagWrapSelected]}>
                     <Text style={styles.flagEmoji}>{langItem.flag}</Text>
                   </View>
@@ -195,7 +220,7 @@ export default function SettingsModal() {
         </View>
 
         {/* Section: Target Budgeting & Rencana */}
-        <Text style={styles.sectionHeader}>PERENCANAAN & TARGET</Text>
+        <Text style={styles.sectionHeader}>{t('settings_planning_section')}</Text>
         <View style={styles.cardGroup}>
           <Pressable
             style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}

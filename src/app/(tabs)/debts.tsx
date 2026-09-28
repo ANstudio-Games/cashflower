@@ -15,7 +15,7 @@ type FilterType = 'all' | 'unpaid' | 'receivable' | 'payable' | 'paid';
 export default function DebtsScreen() {
   const router = useRouter();
   const { debts, debtSummary, toggleDebtStatus, deleteDebtById } = useFinance();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const [filter, setFilter] = useState<FilterType>('unpaid');
 
@@ -57,7 +57,7 @@ export default function DebtsScreen() {
           </View>
           <Text style={styles.cardLabel}>{t('debt_receivable_card_label')}</Text>
           <Text style={[styles.cardValue, { color: colors.receivableDark }]}>
-            {formatCurrency(debtSummary.totalReceivable)}
+            {formatCurrency(debtSummary.totalReceivable, language)}
           </Text>
         </View>
 
@@ -71,7 +71,7 @@ export default function DebtsScreen() {
           </View>
           <Text style={styles.cardLabel}>{t('debt_payable_card_label')}</Text>
           <Text style={[styles.cardValue, { color: colors.debtDark }]}>
-            {formatCurrency(debtSummary.totalPayable)}
+            {formatCurrency(debtSummary.totalPayable, language)}
           </Text>
         </View>
       </View>

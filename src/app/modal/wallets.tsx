@@ -16,6 +16,7 @@ import { useFinance } from '@/context/finance-context';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
 import { Wallet } from '@/types';
+import { useI18n } from '@/i18n';
 
 export default function WalletsModal() {
   const router = useRouter();
@@ -23,29 +24,30 @@ export default function WalletsModal() {
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
 
   const { wallets, deleteWalletById, editWallet } = useFinance();
+  const { t, getWalletName, language } = useI18n();
 
   const totalBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
 
   const handleDelete = (wallet: Wallet) => {
     if (wallets.length <= 1) {
-      Alert.alert('Perhatian', 'Anda harus memiliki minimal satu dompet aktif.');
+      Alert.alert(t('common_attention'), t('wallets_err_min_one_msg'));
       return;
     }
 
     Alert.alert(
-      'Hapus Dompet',
-      `Yakin ingin menghapus dompet "${wallet.name}"? Semua transaksi yang terkait akan dipindahkan ke dompet lainnya.`,
+      t('wallets_delete_confirm_title'),
+      t('wallets_delete_confirm_msg', { name: getWalletName(wallet) }),
       [
-        { text: 'Batal', style: 'cancel' },
+        { text: t('common_cancel'), style: 'cancel' },
         {
-          text: 'Hapus',
+          text: t('common_delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteWalletById(wallet.id);
             } catch (err) {
               console.error(err);
-              Alert.alert('Error', 'Gagal menghapus dompet.');
+              Alert.alert(t('common_error'), t('wallets_delete_err'));
             }
           },
         },
@@ -61,22 +63,22 @@ export default function WalletsModal() {
       });
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Gagal menjadikan dompet utama.');
+      Alert.alert(t('common_error'), t('wallets_set_default_err'));
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'cash':
-        return 'Tunai (Cash)';
+        return t('wallet_type_cash_full');
       case 'bank':
-        return 'Rekening Bank';
+        return t('wallet_type_bank_full');
       case 'ewallet':
-        return 'E-Wallet';
+        return t('wallet_type_ewallet');
       case 'savings':
-        return 'Tabungan / Celengan';
+        return t('wallet_type_savings_full');
       default:
-        return 'Lainnya';
+        return t('wallet_type_other');
     }
   };
 
@@ -87,7 +89,7 @@ export default function WalletsModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Dompet & Rekening</Text>
+        <Text style={styles.headerTitle}>{t('wallets_header_title')}</Text>
         <Pressable
           onPress={() => router.push('/modal/add-wallet')}
           hitSlop={12}
@@ -99,10 +101,10 @@ export default function WalletsModal() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Total Summary Card */}
         <View style={[styles.summaryCard, shadowStyles.md]}>
-          <Text style={styles.summaryLabel}>Total Saldo di Semua Dompet</Text>
-          <Text style={styles.summaryAmount}>{formatCurrency(totalBalance)}</Text>
+          <Text style={styles.summaryLabel}>{t('wallets_total_balance_label')}</Text>
+          <Text style={styles.summaryAmount}>{formatCurrency(totalBalance, language)}</Text>
           <Text style={styles.summarySub}>
-            Tersimpan di {wallets.length} tempat (Tunai, Bank, E-Wallet, dll)
+            {t('wallets_total_stored_sub', { count: wallets.length })}
           </Text>
 
           <View style={styles.summaryActionRow}>
@@ -110,22 +112,22 @@ export default function WalletsModal() {
               style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.85 }]}
               onPress={() => router.push('/modal/transfer-funds')}>
               <Ionicons name="swap-horizontal" size={16} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Transfer Antar Dompet</Text>
+              <Text style={styles.actionButtonText}>{t('wallets_transfer_btn')}</Text>
             </Pressable>
 
             <Pressable
               style={({ pressed }) => [styles.actionButtonSecondary, pressed && { opacity: 0.85 }]}
               onPress={() => router.push('/modal/add-wallet')}>
               <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-              <Text style={styles.actionButtonSecondaryText}>+ Dompet Baru</Text>
+              <Text style={styles.actionButtonSecondaryText}>{t('wallets_add_new_btn')}</Text>
             </Pressable>
           </View>
         </View>
 
         {/* Section Title */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Daftar Tempat Simpan Uang</Text>
-          <Text style={styles.sectionCount}>{wallets.length} Dompet</Text>
+          <Text style={styles.sectionTitle}>{t('wallets_list_title')}</Text>
+          <Text style={styles.sectionCount}>{t('wallets_count_label', { count: wallets.length })}</Text>
         </View>
 
         {/* Wallets List */}
@@ -153,12 +155,12 @@ export default function WalletsModal() {
                   <View style={styles.walletInfo}>
                     <View style={styles.nameRow}>
                       <Text style={styles.walletItemName} numberOfLines={1}>
-                        {wallet.name}
+                        {getWalletName(wallet)}
                       </Text>
                       {wallet.is_default === 1 && (
                         <View style={styles.defaultPill}>
                           <Ionicons name="star" size={9} color="#D97706" />
-                          <Text style={styles.defaultPillText}>Utama</Text>
+                          <Text style={styles.defaultPillText}>{t('wallet_badge_default')}</Text>
                         </View>
                       )}
                     </View>
@@ -167,11 +169,11 @@ export default function WalletsModal() {
 
                   <View style={styles.balanceRight}>
                     <Text style={[styles.currentBalance, isNegative && styles.negativeBalance]}>
-                      {formatCurrency(wallet.balance || 0)}
+                      {formatCurrency(wallet.balance || 0, language)}
                     </Text>
                     {wallet.initial_balance > 0 && (
                       <Text style={styles.initialBalanceSub}>
-                        Saldo awal: {formatCurrency(wallet.initial_balance)}
+                        {t('wallets_initial_balance_label', { amount: formatCurrency(wallet.initial_balance, language) })}
                       </Text>
                     )}
                   </View>
@@ -184,7 +186,7 @@ export default function WalletsModal() {
                       style={({ pressed }) => [styles.cardActionBtn, pressed && { opacity: 0.7 }]}
                       onPress={() => handleSetDefault(wallet)}>
                       <Ionicons name="star-outline" size={14} color={colors.textSecondary} />
-                      <Text style={styles.cardActionBtnText}>Jadikan Utama</Text>
+                      <Text style={styles.cardActionBtnText}>{t('wallets_set_default')}</Text>
                     </Pressable>
                   )}
 
@@ -197,7 +199,7 @@ export default function WalletsModal() {
                       })
                     }>
                     <Ionicons name="pencil-outline" size={14} color={colors.primary} />
-                    <Text style={[styles.cardActionBtnText, { color: colors.primary }]}>Edit</Text>
+                    <Text style={[styles.cardActionBtnText, { color: colors.primary }]}>{t('common_edit')}</Text>
                   </Pressable>
 
                   {wallets.length > 1 && (
@@ -205,7 +207,7 @@ export default function WalletsModal() {
                       style={({ pressed }) => [styles.cardActionBtn, pressed && { opacity: 0.7 }]}
                       onPress={() => handleDelete(wallet)}>
                       <Ionicons name="trash-outline" size={14} color={colors.expense} />
-                      <Text style={[styles.cardActionBtnText, { color: colors.expense }]}>Hapus</Text>
+                      <Text style={[styles.cardActionBtnText, { color: colors.expense }]}>{t('common_delete')}</Text>
                     </Pressable>
                   )}
                 </View>
@@ -218,7 +220,7 @@ export default function WalletsModal() {
         <View style={styles.tipBox}>
           <Ionicons name="bulb-outline" size={20} color={colors.primary} />
           <Text style={styles.tipText}>
-            💡 <Text style={{ fontWeight: '700' }}>Tips Realitas Keuangan:</Text> Pisahkan uang cash di dompet, rekening bank untuk tabungan/gaji, dan e-wallet untuk jajan harian agar pencatatan Anda akurat dengan saldo asli di rekening/dompet Anda.
+            💡 <Text style={{ fontWeight: '700' }}>{t('wallets_tip_title')}</Text> {t('wallets_tip_content')}
           </Text>
         </View>
       </ScrollView>

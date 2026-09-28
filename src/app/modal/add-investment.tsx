@@ -26,7 +26,7 @@ export default function AddInvestmentModal() {
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createInvestment } = useFinance();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const instruments: { id: InvestmentInstrument; label: string; icon: any }[] = [
     { id: 'saham', label: t('inst_saham'), icon: 'business-outline' },
@@ -135,7 +135,7 @@ export default function AddInvestmentModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawBuy ? parseInt(rawBuy, 10).toLocaleString('id-ID') : ''}
+              value={rawBuy}
               onChangeText={(t) => {
                 const num = parseCurrencyInput(t);
                 setRawBuy(num > 0 ? num.toString() : '');
@@ -150,7 +150,7 @@ export default function AddInvestmentModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawSell ? parseInt(rawSell, 10).toLocaleString('id-ID') : ''}
+              value={rawSell}
               onChangeText={(t) => {
                 const num = parseCurrencyInput(t);
                 setRawSell(num > 0 ? num.toString() : '');
@@ -175,7 +175,7 @@ export default function AddInvestmentModal() {
                     { color: isProfit ? colors.incomeDark : colors.expenseDark },
                   ]}>
                   {isProfit ? '+' : ''}
-                  {formatCurrency(pnl)}
+                  {formatCurrency(pnl, language)}
                 </Text>
               </View>
               <View

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import * as Haptics from 'expo-haptics';
 import {
@@ -48,7 +48,8 @@ import {
   setSetting,
 } from '@/db';
 import { backupToGoogleDriveOrShare, restoreFromBackupFile } from '@/utils/backup';
-import { scheduleDailyReminder, scheduleDebtReminder } from '@/utils/notifications';
+import { scheduleDailyReminder, scheduleDebtReminder, cancelDebtReminder } from '@/utils/notifications';
+import { useI18n } from '@/i18n';
 
 interface FinanceContextType {
   isLoading: boolean;
@@ -85,7 +86,7 @@ interface FinanceContextType {
   deletePlanById: (id: string) => Promise<void>;
   isMultiWalletEnabled: boolean;
   setMultiWalletEnabled: (enabled: boolean) => Promise<void>;
-  backupData: (dialogTitle?: string) => Promise<boolean>;
+  backupData: (dialogTitle: string) => Promise<boolean>;
   restoreData: () => Promise<number>;
 }
 
@@ -93,6 +94,9 @@ const FinanceContext = createContext<FinanceContextType | null>(null);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const db = useSQLiteContext();
+  const { language } = useI18n();
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -173,9 +177,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshAll();
-    // Schedule default daily reminder at 20:00
-    scheduleDailyReminder(20, 0);
   }, [refreshAll]);
+
+  useEffect(() => {
+    scheduleDailyReminder(20, 0, languageRef.current);
+  }, []);
+
+  useEffect(() => {
+    debts.forEach((debt) => scheduleDebtReminder(debt, languageRef.current));
+  }, [debts]);
 
   const triggerHaptic = () => {
     try {
@@ -269,19 +279,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       created_at: Date.now(),
     };
     await addDebt(db, newDebt);
-    scheduleDebtReminder(newDebt);
+    scheduleDebtReminder(newDebt, language);
     triggerHaptic();
     await refreshAll();
   };
 
   const toggleDebtStatus = async (id: string, isPaid: boolean) => {
     await toggleDebtPaid(db, id, isPaid);
+    if (isPaid) await cancelDebtReminder(id);
     triggerHaptic();
     await refreshAll();
   };
 
   const deleteDebtById = async (id: string) => {
     await deleteDebt(db, id);
+    await cancelDebtReminder(id);
     triggerHaptic();
     await refreshAll();
   };
@@ -374,14 +386,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         const defaultWalletId = wallets.length > 0 ? wallets[0].id : 'wallet_cash';
         await addTransaction(db, {
           id: txId,
-          title: `Beli: ${plan.title}`,
+          title: plan.title,
           amount: plan.target_amount,
           type: 'expense',
           category_id: plan.category_id || 'cat_shopping',
           wallet_id: defaultWalletId,
           destination_wallet_id: null,
           date: today,
-          notes: plan.notes ? `Target impian tercapai. ${plan.notes}` : 'Target impian tercapai.',
+          notes: plan.notes || null,
+          generated_kind: 'plan_purchase',
+          source_plan_id: plan.id,
           created_at: Date.now(),
         });
       }
@@ -406,7 +420,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const backupData = async (dialogTitle?: string) => {
+  const backupData = async (dialogTitle: string) => {
     return await backupToGoogleDriveOrShare(db, dialogTitle);
   };
 

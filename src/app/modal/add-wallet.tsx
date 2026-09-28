@@ -19,13 +19,14 @@ import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
 import { parseCurrencyInput } from '@/utils/format-currency';
 import { WalletType } from '@/types';
+import { useI18n } from '@/i18n';
 
-const WALLET_TYPES: { type: WalletType; label: string; icon: string }[] = [
-  { type: 'cash', label: 'Tunai (Cash)', icon: 'cash-outline' },
-  { type: 'bank', label: 'Rekening Bank', icon: 'card-outline' },
-  { type: 'ewallet', label: 'E-Wallet', icon: 'phone-portrait-outline' },
-  { type: 'savings', label: 'Tabungan', icon: 'archive-outline' },
-  { type: 'other', label: 'Lainnya', icon: 'wallet-outline' },
+const WALLET_TYPES: { type: WalletType; icon: string }[] = [
+  { type: 'cash', icon: 'cash-outline' },
+  { type: 'bank', icon: 'card-outline' },
+  { type: 'ewallet', icon: 'phone-portrait-outline' },
+  { type: 'savings', icon: 'archive-outline' },
+  { type: 'other', icon: 'wallet-outline' },
 ];
 
 const AVAILABLE_ICONS = [
@@ -64,6 +65,7 @@ export default function AddWalletModal() {
   const isEditing = !!params.id;
 
   const { wallets, createWallet, editWallet } = useFinance();
+  const { t, getWalletName } = useI18n();
 
   const [name, setName] = useState('');
   const [type, setType] = useState<WalletType>('cash');
@@ -77,7 +79,7 @@ export default function AddWalletModal() {
     if (params.id) {
       const existing = wallets.find((w) => w.id === params.id);
       if (existing) {
-        setName(existing.name || '');
+        setName(getWalletName(existing) || existing.name || '');
         setType(existing.type || 'cash');
         setRawInitialBalance(existing.initial_balance ? existing.initial_balance.toString() : '');
         setIcon(existing.icon || 'cash-outline');
@@ -86,7 +88,7 @@ export default function AddWalletModal() {
         setExistingCreatedAt(existing.created_at || Date.now());
       }
     }
-  }, [params.id, wallets]);
+  }, [params.id, wallets, getWalletName]);
 
   const handleBalanceChange = (text: string) => {
     const num = parseCurrencyInput(text);
@@ -102,9 +104,24 @@ export default function AddWalletModal() {
     else if (selectedType === 'savings') setIcon('archive-outline');
   };
 
+  const getTypeLabel = (walletType: WalletType) => {
+    switch (walletType) {
+      case 'cash':
+        return t('wallet_type_cash_full');
+      case 'bank':
+        return t('wallet_type_bank_full');
+      case 'ewallet':
+        return t('wallet_type_ewallet');
+      case 'savings':
+        return t('wallet_type_savings_full');
+      default:
+        return t('wallet_type_other');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert('Perhatian', 'Mohon isi nama dompet / akun.');
+      Alert.alert(t('common_attention'), t('wallet_modal_err_name'));
       return;
     }
 
@@ -135,7 +152,7 @@ export default function AddWalletModal() {
       router.back();
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Error', isEditing ? 'Gagal memperbarui dompet.' : 'Gagal membuat dompet baru.');
+      Alert.alert(t('common_error'), isEditing ? t('wallet_modal_err_update') : t('wallet_modal_err_save'));
     }
   };
 
@@ -148,7 +165,9 @@ export default function AddWalletModal() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>{isEditing ? 'Edit Dompet' : 'Tambah Dompet Baru'}</Text>
+        <Text style={styles.headerTitle}>
+          {isEditing ? t('wallet_modal_edit_title') : t('wallet_modal_add_title')}
+        </Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -158,10 +177,10 @@ export default function AddWalletModal() {
         showsVerticalScrollIndicator={false}>
         {/* Wallet Name */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Nama Dompet / Akun</Text>
+          <Text style={styles.sectionLabel}>{t('wallet_modal_name_label')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Contoh: Dompet Tunai, BCA Utama, GoPay, Tabungan Rumah"
+            placeholder={t('wallet_modal_name_placeholder')}
             placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
@@ -171,7 +190,7 @@ export default function AddWalletModal() {
 
         {/* Wallet Type */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Tipe Tempat Simpan Uang</Text>
+          <Text style={styles.sectionLabel}>{t('wallet_modal_type_label')}</Text>
           <View style={styles.typeGrid}>
             {WALLET_TYPES.map((wt) => {
               const isSelected = type === wt.type;
@@ -193,7 +212,7 @@ export default function AddWalletModal() {
                       styles.typeChipText,
                       isSelected && { color, fontWeight: '700' },
                     ]}>
-                    {wt.label}
+                    {getTypeLabel(wt.type)}
                   </Text>
                 </Pressable>
               );
@@ -203,9 +222,9 @@ export default function AddWalletModal() {
 
         {/* Initial Balance */}
         <View style={styles.amountCard}>
-          <Text style={styles.amountLabel}>Saldo Awal di Dompet Ini</Text>
+          <Text style={styles.amountLabel}>{t('wallet_modal_balance_label')}</Text>
           <Text style={styles.amountSub}>
-            Berapa jumlah uang riil yang saat ini tersimpan di sini?
+            {t('wallet_modal_balance_sub')}
           </Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
@@ -214,7 +233,7 @@ export default function AddWalletModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawInitialBalance ? parseInt(rawInitialBalance, 10).toLocaleString('id-ID') : ''}
+              value={rawInitialBalance}
               onChangeText={handleBalanceChange}
             />
           </View>
@@ -222,7 +241,7 @@ export default function AddWalletModal() {
 
         {/* Icon Picker */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Pilih Ikon</Text>
+          <Text style={styles.sectionLabel}>{t('wallet_modal_icon_label')}</Text>
           <View style={styles.iconsRow}>
             {AVAILABLE_ICONS.map((ic) => {
               const isSelected = icon === ic;
@@ -247,7 +266,7 @@ export default function AddWalletModal() {
 
         {/* Color Picker */}
         <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Pilih Warna Aksen</Text>
+          <Text style={styles.sectionLabel}>{t('wallet_modal_color_label')}</Text>
           <View style={styles.colorsRow}>
             {AVAILABLE_COLORS.map((c) => {
               const isSelected = color === c;
@@ -270,9 +289,9 @@ export default function AddWalletModal() {
         {/* Default Wallet Switch */}
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.switchTitle}>Jadikan Dompet Utama</Text>
+            <Text style={styles.switchTitle}>{t('wallet_modal_default_title')}</Text>
             <Text style={styles.switchSub}>
-              Dompet ini akan otomatis terpilih saat mencatat pengeluaran/pemasukan baru.
+              {t('wallet_modal_default_sub')}
             </Text>
           </View>
           <Switch
@@ -293,7 +312,7 @@ export default function AddWalletModal() {
           onPress={handleSubmit}>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
           <Text style={styles.submitBtnText}>
-            {isEditing ? 'Simpan Perubahan Dompet' : 'Simpan Dompet Baru'}
+            {isEditing ? t('wallet_modal_btn_edit') : t('wallet_modal_btn_add')}
           </Text>
         </Pressable>
       </ScrollView>

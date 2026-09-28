@@ -13,7 +13,7 @@ import { useI18n } from '@/i18n';
 export default function InvestmentsScreen() {
   const router = useRouter();
   const { investments, investmentSummary, deleteInvestmentById } = useFinance();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const instrumentFilters = useMemo(
     () => [
@@ -68,7 +68,7 @@ export default function InvestmentsScreen() {
                 { color: isNetProfit ? colors.incomeDark : colors.expenseDark },
               ]}>
               {isNetProfit ? '+' : ''}
-              {formatCurrency(investmentSummary.totalPnl)}
+              {formatCurrency(investmentSummary.totalPnl, language)}
             </Text>
           </View>
           <View
@@ -98,7 +98,7 @@ export default function InvestmentsScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statCol}>
             <Text style={styles.statColLabel}>{t('inv_total_capital')}</Text>
-            <Text style={styles.statColVal}>{formatCurrency(investmentSummary.totalCapital)}</Text>
+            <Text style={styles.statColVal}>{formatCurrency(investmentSummary.totalCapital, language)}</Text>
           </View>
           <View style={styles.verticalLine} />
           <View style={styles.statCol}>

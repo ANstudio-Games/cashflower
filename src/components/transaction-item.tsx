@@ -21,13 +21,31 @@ export function TransactionItem({
 }: TransactionItemProps) {
   const isIncome = item.type === 'income';
   const isTransfer = item.type === 'transfer';
-  const { t, getRelativeDateLabel, getCategoryName } = useI18n();
+  const {
+    t,
+    language,
+    getRelativeDateLabel,
+    getCategoryName,
+    getWalletName,
+    getTransactionTitle,
+    getTransactionNotes,
+  } = useI18n();
+  const displayTitle = getTransactionTitle(item);
+  const displayNotes = getTransactionNotes(item);
+  const walletName = getWalletName({
+    id: item.wallet_id,
+    name: item.wallet_name,
+  }) || t('common_wallet');
+  const destinationWalletName = getWalletName({
+    id: item.destination_wallet_id,
+    name: item.destination_wallet_name,
+  }) || t('common_destination');
 
   const handleDelete = () => {
     if (!onDelete) return;
     Alert.alert(
       t('tx_delete_confirm_title'),
-      t('tx_delete_confirm_msg', { title: item.title }),
+      t('tx_delete_confirm_msg', { title: displayTitle }),
       [
         { text: t('common_cancel'), style: 'cancel' },
         { text: t('common_delete'), style: 'destructive', onPress: () => onDelete(item.id) },
@@ -54,19 +72,19 @@ export function TransactionItem({
       {/* Info */}
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>
-          {item.title}
+          {displayTitle}
         </Text>
         <View style={styles.metaRow}>
           {isTransfer ? (
             <View style={[styles.walletBadge, { backgroundColor: '#EEF2FF' }]}>
               <Ionicons name="swap-horizontal" size={11} color="#6366F1" />
               <Text style={[styles.walletBadgeText, { color: '#6366F1' }]}>
-                {item.wallet_name || 'Wallet'} ➔ {item.destination_wallet_name || 'Dest'}
+                {walletName} ➔ {destinationWalletName}
               </Text>
             </View>
           ) : (
             <>
-              {showWalletBadge && item.wallet_name && (
+              {showWalletBadge && (item.wallet_id || item.wallet_name) && (
                 <>
                   <View style={[styles.walletBadge, { backgroundColor: `${item.wallet_color || colors.textMuted}14` }]}>
                     <Ionicons
@@ -80,7 +98,7 @@ export function TransactionItem({
                         { color: item.wallet_color || colors.textSecondary },
                       ]}
                       numberOfLines={1}>
-                      {item.wallet_name}
+                      {walletName}
                     </Text>
                   </View>
                   <Text style={styles.dot}>•</Text>
@@ -95,9 +113,9 @@ export function TransactionItem({
           <Text style={styles.dot}>•</Text>
           <Text style={styles.date}>{getRelativeDateLabel(item.date)}</Text>
         </View>
-        {item.notes ? (
+        {displayNotes ? (
           <Text style={styles.notes} numberOfLines={1}>
-            {item.notes}
+            {displayNotes}
           </Text>
         ) : null}
       </View>
@@ -110,10 +128,10 @@ export function TransactionItem({
             isTransfer ? styles.transferText : isIncome ? styles.incomeText : styles.expenseText,
           ]}>
           {isTransfer
-            ? formatCurrency(item.amount)
+            ? formatCurrency(item.amount, language)
             : isIncome
-            ? `+${formatCurrency(item.amount)}`
-            : `-${formatCurrency(item.amount)}`}
+            ? `+${formatCurrency(item.amount, language)}`
+            : `-${formatCurrency(item.amount, language)}`}
         </Text>
 
         <View style={styles.actionRow}>
