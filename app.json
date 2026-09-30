@@ -38,11 +38,22 @@
       "expo-sqlite",
       "expo-sharing",
       "expo-notifications",
-      "expo-document-picker"
+      "expo-document-picker",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-2354120872211211~1163007966",
+          "iosAppId": "ca-app-pub-2354120872211211~1163007966"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-2354120872211211~1163007966",
+    "ios_app_id": "ca-app-pub-2354120872211211~1163007966"
   }
 }

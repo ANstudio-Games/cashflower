@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSQLiteContext } from 'expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
@@ -20,9 +21,11 @@ import { formatCurrency, formatNumberInput, parseCurrencyWithBackspace } from '@
 import { getTodayISO } from '@/utils/format-date';
 import { TransactionType } from '@/types';
 import { useI18n } from '@/i18n';
+import { handleTransactionSavedWithAd } from '@/services/ad-service';
 
 export default function AddTransactionModal() {
   const router = useRouter();
+  const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const params = useLocalSearchParams<{ id?: string }>();
@@ -117,6 +120,7 @@ export default function AddTransactionModal() {
           notes: notes.trim() || null,
           created_at: existingCreatedAt,
         });
+        router.back();
       } else {
         await createTransaction({
           title: title.trim(),
@@ -128,8 +132,10 @@ export default function AddTransactionModal() {
           date,
           notes: notes.trim() || null,
         });
+        await handleTransactionSavedWithAd(db, () => {
+          router.back();
+        });
       }
-      router.back();
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), isEditing ? t('tx_modal_err_update') : t('tx_modal_err_save'));

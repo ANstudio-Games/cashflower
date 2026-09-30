@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SQLiteProvider } from 'expo-sqlite';
@@ -7,8 +7,12 @@ import { DB_NAME, initDatabase } from '@/db';
 import { I18nProvider } from '@/i18n';
 import { FinanceProvider } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
+import { initializeAds } from '@/services/ad-service';
 
 export default function RootLayout() {
+  useEffect(() => {
+    initializeAds();
+  }, []);
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
