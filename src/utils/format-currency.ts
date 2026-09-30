@@ -41,6 +41,52 @@ export function formatCurrencyShort(amount: number, language: Language = 'id'): 
 }
 
 export function parseCurrencyInput(text: string): number {
-  const clean = text.replace(/[^0-9]/g, '');
-  return clean ? parseInt(clean, 10) : 0;
+  if (!text) return 0;
+  const clean = text.toString().replace(/[^0-9]/g, '');
+  return clean ? parseInt(clean.slice(0, 15), 10) : 0;
+}
+
+export function formatNumberInput(
+  value: number | string | null | undefined,
+  language: Language = 'id'
+): string {
+  if (value === undefined || value === null || value === '') return '';
+  const num = typeof value === 'number' ? value : parseCurrencyInput(value.toString());
+  if (!num || isNaN(num) || num <= 0) return '';
+  return new Intl.NumberFormat(localeTags[language] || localeTags.id, {
+    maximumFractionDigits: 0,
+  }).format(Math.abs(Math.round(num)));
+}
+
+export function parseCurrencyWithBackspace(
+  newText: string,
+  prevFormatted: string
+): string {
+  if (!newText) return '';
+  const clean = newText.replace(/[^0-9]/g, '');
+  let num = clean ? parseInt(clean.slice(0, 15), 10) : 0;
+
+  const prevClean = prevFormatted ? prevFormatted.replace(/[^0-9]/g, '') : '';
+  const prevNum = prevClean ? parseInt(prevClean.slice(0, 15), 10) : 0;
+
+  // If length decreased, but the number of digits didn't decrease,
+  // that means a non-digit (separator) was deleted by backspace.
+  if (num === prevNum && newText.length < prevFormatted.length && prevClean.length > 0) {
+    let delIdx = newText.length;
+    for (let i = 0; i < newText.length; i++) {
+      if (newText[i] !== prevFormatted[i]) {
+        delIdx = i;
+        break;
+      }
+    }
+    const digitsBefore = prevFormatted.slice(0, delIdx).replace(/[^0-9]/g, '');
+    const deleteDigitIndex = digitsBefore.length - 1;
+    if (deleteDigitIndex >= 0) {
+      const newDigits =
+        prevClean.slice(0, deleteDigitIndex) + prevClean.slice(deleteDigitIndex + 1);
+      num = newDigits ? parseInt(newDigits, 10) : 0;
+    }
+  }
+
+  return num > 0 ? num.toString() : '';
 }

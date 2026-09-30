@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { useI18n } from '@/i18n';
 
 export default function BudgetModal() {
@@ -28,6 +28,12 @@ export default function BudgetModal() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('global'); // 'global' or categoryId
   const [rawLimit, setRawLimit] = useState('');
+
+  const handleLimitChange = (text: string) => {
+    const currentFormatted = formatNumberInput(rawLimit, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawLimit(nextRaw);
+  };
 
   const globalBudget = budgets.find((b) => b.category_id === null);
 
@@ -137,11 +143,8 @@ export default function BudgetModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawLimit}
-              onChangeText={(t) => {
-                const num = parseCurrencyInput(t);
-                setRawLimit(num > 0 ? num.toString() : '');
-              }}
+              value={formatNumberInput(rawLimit, language)}
+              onChangeText={handleLimitChange}
             />
           </View>
 

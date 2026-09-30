@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { useI18n } from '@/i18n';
 import { colors, shadowStyles } from '@/theme/colors';
-import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 
 export default function AddPlanModal() {
   const router = useRouter();
@@ -58,8 +58,9 @@ export default function AddPlanModal() {
   }, [params.id, plans]);
 
   const handleAmountChange = (text: string) => {
-    const num = parseCurrencyInput(text);
-    setRawAmount(num > 0 ? num.toString() : '');
+    const currentFormatted = formatNumberInput(rawAmount, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawAmount(nextRaw);
   };
 
   const parsedAmount = parseInt(rawAmount, 10) || 0;
@@ -142,8 +143,8 @@ export default function AddPlanModal() {
                 style={styles.amountInput}
                 placeholder="0"
                 placeholderTextColor="#CBD5E1"
-                keyboardType="numeric"
-                value={rawAmount}
+                keyboardType="number-pad"
+                value={formatNumberInput(rawAmount, language)}
                 onChangeText={handleAmountChange}
                 autoFocus={!isEditing}
               />

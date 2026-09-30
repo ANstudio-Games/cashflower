@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { parseCurrencyInput } from '@/utils/format-currency';
+import { formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { WalletType } from '@/types';
 import { useI18n } from '@/i18n';
 
@@ -65,7 +65,7 @@ export default function AddWalletModal() {
   const isEditing = !!params.id;
 
   const { wallets, createWallet, editWallet } = useFinance();
-  const { t, getWalletName } = useI18n();
+  const { t, getWalletName, language } = useI18n();
 
   const [name, setName] = useState('');
   const [type, setType] = useState<WalletType>('cash');
@@ -91,8 +91,9 @@ export default function AddWalletModal() {
   }, [params.id, wallets, getWalletName]);
 
   const handleBalanceChange = (text: string) => {
-    const num = parseCurrencyInput(text);
-    setRawInitialBalance(num > 0 ? num.toString() : '');
+    const currentFormatted = formatNumberInput(rawInitialBalance, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawInitialBalance(nextRaw);
   };
 
   const handleTypeSelect = (selectedType: WalletType) => {
@@ -233,7 +234,7 @@ export default function AddWalletModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawInitialBalance}
+              value={formatNumberInput(rawInitialBalance, language)}
               onChangeText={handleBalanceChange}
             />
           </View>

@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { formatCurrency, formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { TransactionType } from '@/types';
 import { useI18n } from '@/i18n';
@@ -79,8 +79,9 @@ export default function AddTransactionModal() {
   }, [type, availableCategories, selectedCategory, isEditing]);
 
   const handleAmountChange = (text: string) => {
-    const clean = text.replace(/[^0-9]/g, '');
-    setRawAmount(clean);
+    const currentFormatted = formatNumberInput(rawAmount, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawAmount(nextRaw);
   };
 
   const handleSubmit = async () => {
@@ -207,7 +208,7 @@ export default function AddTransactionModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawAmount}
+              value={formatNumberInput(rawAmount, language)}
               onChangeText={handleAmountChange}
               autoFocus={!isEditing}
             />

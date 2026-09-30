@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { parseCurrencyInput } from '@/utils/format-currency';
+import { formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { DebtType } from '@/types';
 import { useI18n } from '@/i18n';
@@ -26,7 +26,7 @@ export default function AddDebtModal() {
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createDebt } = useFinance();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const [type, setType] = useState<DebtType>('receivable'); // default: Piutang (orang pinjam ke saya)
   const [personName, setPersonName] = useState('');
@@ -36,8 +36,9 @@ export default function AddDebtModal() {
   const [notes, setNotes] = useState('');
 
   const handleAmountChange = (text: string) => {
-    const num = parseCurrencyInput(text);
-    setRawAmount(num > 0 ? num.toString() : '');
+    const currentFormatted = formatNumberInput(rawAmount, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawAmount(nextRaw);
   };
 
   const handleSave = async () => {
@@ -123,7 +124,7 @@ export default function AddDebtModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawAmount}
+              value={formatNumberInput(rawAmount, language)}
               onChangeText={handleAmountChange}
               autoFocus
             />

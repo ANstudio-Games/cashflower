@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { useI18n } from '@/i18n';
 
@@ -45,8 +45,9 @@ export default function TransferFundsModal() {
   const transferAmount = parseInt(rawAmount, 10) || 0;
 
   const handleAmountChange = (text: string) => {
-    const num = parseCurrencyInput(text);
-    setRawAmount(num > 0 ? num.toString() : '');
+    const currentFormatted = formatNumberInput(rawAmount, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawAmount(nextRaw);
   };
 
   const handleSwap = () => {
@@ -192,7 +193,7 @@ export default function TransferFundsModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawAmount}
+              value={formatNumberInput(rawAmount, language)}
               onChangeText={handleAmountChange}
               autoFocus
             />

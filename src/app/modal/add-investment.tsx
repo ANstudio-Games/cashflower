@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { InvestmentInstrument } from '@/types';
 import { useI18n } from '@/i18n';
@@ -43,6 +43,18 @@ export default function AddInvestmentModal() {
   const [rawSell, setRawSell] = useState('');
   const [tradeDate, setTradeDate] = useState(getTodayISO());
   const [notes, setNotes] = useState('');
+
+  const handleBuyChange = (text: string) => {
+    const currentFormatted = formatNumberInput(rawBuy, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawBuy(nextRaw);
+  };
+
+  const handleSellChange = (text: string) => {
+    const currentFormatted = formatNumberInput(rawSell, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawSell(nextRaw);
+  };
 
   const buyPrice = rawBuy ? parseInt(rawBuy, 10) : 0;
   const sellPrice = rawSell ? parseInt(rawSell, 10) : 0;
@@ -135,11 +147,8 @@ export default function AddInvestmentModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawBuy}
-              onChangeText={(t) => {
-                const num = parseCurrencyInput(t);
-                setRawBuy(num > 0 ? num.toString() : '');
-              }}
+              value={formatNumberInput(rawBuy, language)}
+              onChangeText={handleBuyChange}
             />
           </View>
 
@@ -150,11 +159,8 @@ export default function AddInvestmentModal() {
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={rawSell}
-              onChangeText={(t) => {
-                const num = parseCurrencyInput(t);
-                setRawSell(num > 0 ? num.toString() : '');
-              }}
+              value={formatNumberInput(rawSell, language)}
+              onChangeText={handleSellChange}
             />
           </View>
         </View>

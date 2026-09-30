@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors, shadowStyles } from '@/theme/colors';
-import { formatCurrency, parseCurrencyInput } from '@/utils/format-currency';
+import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { DebtPayment } from '@/types';
 import { useI18n } from '@/i18n';
@@ -115,8 +115,9 @@ export default function DebtDetailModal() {
   const themeSoft = isReceivable ? colors.receivableSoft : colors.debtSoft;
 
   const handleAmountChange = (text: string) => {
-    const num = parseCurrencyInput(text);
-    setRawAmount(num > 0 ? num.toString() : '');
+    const currentFormatted = formatNumberInput(rawAmount, language);
+    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
+    setRawAmount(nextRaw);
   };
 
   const handleOpenInstallmentForm = (prefillFull: boolean = false) => {
@@ -426,8 +427,8 @@ export default function DebtDetailModal() {
                   style={styles.amountInput}
                   placeholder="0"
                   placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  value={rawAmount ? formatCurrency(parseInt(rawAmount, 10)).replace('Rp ', '') : ''}
+                  keyboardType="number-pad"
+                  value={formatNumberInput(rawAmount, language)}
                   onChangeText={handleAmountChange}
                   autoFocus
                 />
