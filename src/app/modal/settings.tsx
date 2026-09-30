@@ -394,7 +394,7 @@ export default function SettingsModal() {
 
         {/* Info App */}
         <View style={styles.footerInfo}>
-          <Text style={styles.appName}>🌸 Cashflower v1.5.0</Text>
+          <Text style={styles.appName}>🌸 Cashflower v1.6.0</Text>
           <Text style={styles.appSub}>{t('settings_footer_tag')}</Text>
         </View>
       </ScrollView>
