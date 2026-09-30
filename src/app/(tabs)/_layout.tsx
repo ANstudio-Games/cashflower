@@ -1,11 +1,10 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 import { useI18n } from '@/i18n';
-import AdBanner from '@/components/ads/ad-banner';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -16,8 +15,7 @@ export default function TabLayout() {
   const barHeight = 58 + bottomPadding;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Tabs
+    <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -92,7 +90,5 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-    <AdBanner />
-  </View>
   );
 }

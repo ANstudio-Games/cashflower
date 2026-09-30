@@ -38,12 +38,6 @@ describe('AdMob Configuration and Frequency Logic', () => {
   });
 
   describe('getAdUnitId', () => {
-    it('returns test banner ID when in development or test mode', () => {
-      const bannerId = getAdUnitId('banner', false);
-      assert.ok(bannerId);
-      assert.match(bannerId, /ca-app-pub-3940256099942544/);
-    });
-
     it('returns test interstitial ID when in development or test mode', () => {
       const interstitialId = getAdUnitId('interstitial', false);
       assert.ok(interstitialId);
@@ -51,7 +45,7 @@ describe('AdMob Configuration and Frequency Logic', () => {
     });
 
     it('uses configured production ID when isProd is true and prod ID is available', () => {
-      const id = getAdUnitId('banner', true);
+      const id = getAdUnitId('interstitial', true);
       assert.ok(id);
     });
   });
