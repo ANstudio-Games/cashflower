@@ -20,6 +20,7 @@ import { colors } from '@/theme/colors';
 import { formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { WalletType } from '@/types';
 import { useI18n } from '@/i18n';
+import { useSaveAction } from '@/utils/use-save-action';
 
 const WALLET_TYPES: { type: WalletType; icon: string }[] = [
   { type: 'cash', icon: 'cash-outline' },
@@ -59,6 +60,7 @@ const AVAILABLE_COLORS = [
 
 export default function AddWalletModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const params = useLocalSearchParams<{ id?: string }>();
@@ -163,7 +165,7 @@ export default function AddWalletModal() {
       style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>
@@ -249,6 +251,9 @@ export default function AddWalletModal() {
               return (
                 <Pressable
                   key={ic}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y_icon', { name: ic })}
+                  accessibilityState={{ selected: icon === ic }}
                   style={[
                     styles.iconBox,
                     isSelected && { borderColor: color, backgroundColor: `${color}20` },
@@ -274,6 +279,9 @@ export default function AddWalletModal() {
               return (
                 <Pressable
                   key={c}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y_color', { name: c })}
+                  accessibilityState={{ selected: color === c }}
                   style={[
                     styles.colorCircle,
                     { backgroundColor: c },
@@ -307,15 +315,21 @@ export default function AddWalletModal() {
         <Pressable
           style={({ pressed }) => [
             styles.submitBtn,
-            { backgroundColor: color },
+            isSaving && { opacity: 0.65 },
+            { backgroundColor: colors.primaryDark },
             pressed && styles.submitBtnPressed,
           ]}
-          onPress={handleSubmit}>
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          onPress={() => { void runSave(handleSubmit); }}>
+          {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
           <Text style={styles.submitBtnText}>
             {isEditing ? t('wallet_modal_btn_edit') : t('wallet_modal_btn_add')}
           </Text>
-        </Pressable>
+                  </>)}
+</Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -436,8 +450,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   iconBox: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -451,8 +465,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   colorCircle: {
-    width: 38,
-    height: 38,
+    width: 48,
+    height: 48,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',

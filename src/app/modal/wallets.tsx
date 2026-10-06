@@ -86,7 +86,7 @@ export default function WalletsModal() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('wallets_header_title')}</Text>

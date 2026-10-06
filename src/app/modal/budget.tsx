@@ -18,9 +18,11 @@ import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
 import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { useI18n } from '@/i18n';
+import { useSaveAction } from '@/utils/use-save-action';
 
 export default function BudgetModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { categories, budgets, saveNewBudget, removeBudget } = useFinance();
@@ -73,7 +75,7 @@ export default function BudgetModal() {
       style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('budget_modal_title')}</Text>
@@ -149,11 +151,16 @@ export default function BudgetModal() {
           </View>
 
           <Pressable
-            style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}
-            onPress={handleSave}>
+            style={({ pressed }) => [styles.saveBtn, isSaving && { opacity: 0.65 }, pressed && { opacity: 0.85 }]}
+            disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          onPress={() => { void runSave(handleSave); }}>
+          {isSaving ? <Text style={styles.saveBtnText}>{t('safety_saving')}</Text> : (<>
             <Ionicons name="checkmark" size={18} color="#FFFFFF" />
             <Text style={styles.saveBtnText}>{t('budget_save_btn')}</Text>
-          </Pressable>
+                    </>)}
+</Pressable>
         </View>
 
         {/* List of Active Budgets */}
