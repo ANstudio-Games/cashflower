@@ -1,3 +1,5 @@
+import { validateAllocation, splitPlanPurchase } from '@/utils/plan-allocation';
+import { ALLOCATION_GUARDS_SQL } from './allocation-guards';
 import * as SQLite from 'expo-sqlite';
 import {
   Category,
@@ -135,6 +137,13 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       FOREIGN KEY (category_id) REFERENCES categories (id)
     );
 
+    CREATE TABLE IF NOT EXISTS plan_allocations (
+      plan_id TEXT NOT NULL REFERENCES financial_plans(id) ON DELETE CASCADE,
+      wallet_id TEXT NOT NULL REFERENCES wallets(id),
+      amount REAL NOT NULL CHECK(amount > 0),
+      PRIMARY KEY (plan_id, wallet_id)
+    );
+
     CREATE TABLE IF NOT EXISTS debt_payments (
       id TEXT PRIMARY KEY,
       debt_id TEXT NOT NULL,
@@ -185,6 +194,8 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   } catch (migErr) {
     console.warn('Migration check warning:', migErr);
   }
+
+  await db.execAsync(ALLOCATION_GUARDS_SQL);
 
   // Insert default wallets if not already populated
   const existingWallets = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM wallets');
@@ -301,6 +312,10 @@ export async function updateWallet(
   db: SQLite.SQLiteDatabase,
   wallet: Omit<Wallet, 'balance'>
 ): Promise<void> {
+  const previousWallet = await getWalletById(db, wallet.id);
+  if (previousWallet && wallet.initial_balance < previousWallet.initial_balance && await getReservedBalance(db, wallet.id) > 0) {
+    throw new Error('allocation_wallet_reserved');
+  }
   if (wallet.is_default === 1) {
     await db.runAsync('UPDATE wallets SET is_default = 0 WHERE id != ?', [wallet.id]);
   }
@@ -311,6 +326,7 @@ export async function updateWallet(
 }
 
 export async function deleteWallet(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
+  if (await getReservedBalance(db, id) > 0) throw new Error('allocation_wallet_reserved');
   // Reassign transactions referencing this wallet to default or fallback wallet
   const fallback = await db.getFirstAsync<Wallet>(
     'SELECT * FROM wallets WHERE id != ? ORDER BY is_default DESC, created_at ASC LIMIT 1',
@@ -936,7 +952,7 @@ export async function getPlans(
   options?: { isCompleted?: boolean; isPinned?: boolean }
 ): Promise<FinancialPlan[]> {
   let query = `
-    SELECT p.*, c.name as category_name, c.icon as category_icon, c.color as category_color
+    SELECT p.*, COALESCE((SELECT SUM(amount) FROM plan_allocations WHERE plan_id = p.id), 0) as allocated_amount, c.name as category_name, c.icon as category_icon, c.color as category_color
     FROM financial_plans p
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE 1=1
@@ -1016,7 +1032,10 @@ export async function completePlan(db: SQLite.SQLiteDatabase, id: string, isComp
 }
 
 export async function deletePlan(db: SQLite.SQLiteDatabase, id: string): Promise<void> {
-  await db.runAsync('DELETE FROM financial_plans WHERE id = ?', [id]);
+  await db.withExclusiveTransactionAsync(async tx => {
+    await tx.runAsync('DELETE FROM plan_allocations WHERE plan_id = ?', [id]);
+    await tx.runAsync('DELETE FROM financial_plans WHERE id = ?', [id]);
+  });
 }
 
 // ------------------- App Settings Operations -------------------
@@ -1051,7 +1070,7 @@ export async function setSetting(
 // ------------------- Backup & Restore Operations -------------------
 
 export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupData> {
-  const [categories, transactions, debts, debtPayments, investments, budgets, plans, wallets, multiWalletVal] = await Promise.all([
+  const [categories, transactions, debts, debtPayments, investments, budgets, plans, wallets, multiWalletVal, allocations] = await Promise.all([
     db.getAllAsync<Category>('SELECT * FROM categories'),
     db.getAllAsync<Transaction>('SELECT * FROM transactions'),
     db.getAllAsync<Debt>('SELECT * FROM debts'),
@@ -1061,6 +1080,7 @@ export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupDa
     db.getAllAsync<FinancialPlan>('SELECT * FROM financial_plans'),
     db.getAllAsync<Wallet>('SELECT * FROM wallets'),
     getSetting(db, 'is_multi_wallet_enabled', 'true'),
+    db.getAllAsync<import('@/types').PlanAllocation>('SELECT * FROM plan_allocations'),
   ]);
 
   return {
@@ -1073,6 +1093,7 @@ export async function exportAllData(db: SQLite.SQLiteDatabase): Promise<BackupDa
     investments,
     budgets,
     plans,
+    plan_allocations: allocations,
     wallets,
     settings: {
       isMultiWalletEnabled: multiWalletVal === 'true',
@@ -1084,6 +1105,7 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
   await db.withTransactionAsync(async () => {
     // Clear current tables
     await db.execAsync(`
+      DELETE FROM plan_allocations;
       DELETE FROM transactions;
       DELETE FROM debt_payments;
       DELETE FROM debts;
@@ -1220,9 +1242,55 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
       }
     }
 
+    for (const row of backup.plan_allocations || []) {
+      validateAllocation(row.amount, Number.MAX_VALUE);
+      const plan = await db.getFirstAsync<FinancialPlan>('SELECT * FROM financial_plans WHERE id = ? AND is_completed = 0', [row.plan_id]);
+      if (!plan || !(await getWalletById(db, row.wallet_id))) throw new Error('invalid_backup');
+      await db.runAsync('INSERT INTO plan_allocations (plan_id, wallet_id, amount) VALUES (?, ?, ?)', [row.plan_id, row.wallet_id, row.amount]);
+    }
+    for (const wallet of await getWallets(db)) {
+      if ((await getReservedBalance(db, wallet.id)) > (wallet.balance || 0) + 0.000001) throw new Error('invalid_backup');
+    }
+
     // Restore settings
     if (backup.settings?.isMultiWalletEnabled !== undefined) {
       await setSetting(db, 'is_multi_wallet_enabled', backup.settings.isMultiWalletEnabled ? 'true' : 'false');
     }
+  });
+}
+
+export async function getReservedBalance(db: SQLite.SQLiteDatabase, walletId: string): Promise<number> {
+  const row = await db.getFirstAsync<{ amount: number }>('SELECT COALESCE(SUM(amount), 0) as amount FROM plan_allocations WHERE wallet_id = ?', [walletId]);
+  return row?.amount || 0;
+}
+
+export async function adjustPlanAllocation(db: SQLite.SQLiteDatabase, planId: string, walletId: string, amount: number, withdraw: boolean): Promise<void> {
+  await db.withExclusiveTransactionAsync(async tx => {
+    const plan = await tx.getFirstAsync<FinancialPlan>('SELECT * FROM financial_plans WHERE id = ? AND is_completed = 0', [planId]);
+    const wallet = await getWalletById(tx, walletId);
+    if (!plan || !wallet) throw new Error('allocation_invalid');
+    const row = await tx.getFirstAsync<{ amount: number }>('SELECT amount FROM plan_allocations WHERE plan_id = ? AND wallet_id = ?', [planId, walletId]);
+    const previous = row?.amount || 0;
+    validateAllocation(amount, withdraw ? previous : (wallet.balance || 0) - await getReservedBalance(tx, walletId));
+    const next = previous + (withdraw ? -amount : amount);
+    if (next <= 0.000001) await tx.runAsync('DELETE FROM plan_allocations WHERE plan_id = ? AND wallet_id = ?', [planId, walletId]);
+    else await tx.runAsync('INSERT INTO plan_allocations (plan_id, wallet_id, amount) VALUES (?, ?, ?) ON CONFLICT(plan_id, wallet_id) DO UPDATE SET amount = excluded.amount', [planId, walletId, next]);
+  });
+}
+
+export async function purchaseAllocatedPlan(db: SQLite.SQLiteDatabase, planId: string): Promise<void> {
+  await db.withExclusiveTransactionAsync(async tx => {
+    const plan = await tx.getFirstAsync<FinancialPlan>('SELECT * FROM financial_plans WHERE id = ? AND is_completed = 0', [planId]);
+    if (!plan) throw new Error('allocation_invalid');
+    const rows = await tx.getAllAsync<{ wallet_id: string; amount: number }>('SELECT wallet_id, amount FROM plan_allocations WHERE plan_id = ? ORDER BY wallet_id', [planId]);
+    const spend = splitPlanPurchase(rows, plan.target_amount);
+    // Remove reservations inside the same transaction; any failure restores them.
+    await tx.runAsync('DELETE FROM plan_allocations WHERE plan_id = ?', [planId]);
+    const now = new Date();
+    const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    for (const [index, row] of spend.entries()) {
+      await addTransaction(tx, { id: `plan_${planId}_${Date.now()}_${index}`, title: plan.title, type: 'expense', amount: row.amount, wallet_id: row.wallet_id, destination_wallet_id: null, category_id: plan.category_id || 'cat_shopping', date, notes: plan.notes || null, generated_kind: 'plan_purchase', source_plan_id: planId, created_at: Date.now() });
+    }
+    await completePlan(tx, planId, true);
   });
 }
