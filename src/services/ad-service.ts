@@ -4,7 +4,7 @@ import mobileAds, {
   InterstitialAd,
   AdEventType,
 } from 'react-native-google-mobile-ads';
-import { getAdUnitId, shouldShowAd } from '@/config/ads';
+import { AD_COUNTER_KEYS, AdSaveCategory, getAdUnitId, shouldShowAd } from '@/config/ads';
 import { getSetting, setSetting } from '@/db';
 
 let isInitialized = false;
@@ -67,6 +67,9 @@ export function preloadInterstitial(): void {
       isInterstitialLoaded = false;
       isInterstitialLoading = false;
       console.warn('[AdMob] Interstitial Error:', error);
+      const cb = onDismissCallback;
+      onDismissCallback = null;
+      cb?.();
 
       // Coba load ulang setelah 20 detik
       setTimeout(() => {
@@ -98,7 +101,14 @@ export function showInterstitialIfAvailable(onClose?: () => void): boolean {
   onDismissCallback = onClose || null;
 
   try {
-    interstitialInstance.show();
+    isInterstitialLoaded = false;
+    void interstitialInstance.show().catch(error => {
+      console.warn('[AdMob] Gagal menampilkan interstitial:', error);
+      const cb = onDismissCallback;
+      onDismissCallback = null;
+      cb?.();
+      preloadInterstitial();
+    });
     return true;
   } catch (error) {
     console.warn('[AdMob] Gagal memanggil show():', error);
@@ -117,26 +127,38 @@ export function showInterstitialIfAvailable(onClose?: () => void): boolean {
  * - Transaksi #5 & #6: Jeda
  * - Transaksi #7: Iklan
  */
-export async function handleTransactionSavedWithAd(
+export function handleTransactionSavedWithAd(
   db: SQLite.SQLiteDatabase,
   onFinish: () => void
 ): Promise<void> {
+  return handleSavedWithAd(db, 'transaction', onFinish);
+}
+
+/** Satu preloader bersama, tetapi setiap kategori punya counter sendiri. */
+export async function handleSavedWithAd(
+  db: SQLite.SQLiteDatabase,
+  category: AdSaveCategory,
+  onFinish: () => void
+): Promise<void> {
   let finished = false;
+  let resolveFinished!: () => void;
+  const completion = new Promise<void>(resolve => { resolveFinished = resolve; });
   const safeFinish = () => {
     if (!finished) {
       finished = true;
-      onFinish();
+      try { onFinish(); } finally { resolveFinished(); }
     }
   };
 
   try {
     // Ambil riwayat jumlah simpan transaksi
-    const currentCountStr = await getSetting(db, 'ad_tx_save_count', '0');
+    const counterKey = AD_COUNTER_KEYS[category];
+    const currentCountStr = await getSetting(db, counterKey, '0');
     const currentCount = parseInt(currentCountStr, 10) || 0;
     const nextCount = currentCount + 1;
 
     // Simpan hitungan terbaru
-    await setSetting(db, 'ad_tx_save_count', nextCount.toString());
+    await setSetting(db, counterKey, nextCount.toString());
 
     // Periksa apakah transaksi ini waktunya muncul iklan
     const isAdTurn = shouldShowAd(nextCount);
@@ -147,6 +169,7 @@ export async function handleTransactionSavedWithAd(
         // Jika iklan belum ready atau offline, langsung lanjutkan tanpa delay
         safeFinish();
       }
+      await completion;
     } else {
       safeFinish();
     }
