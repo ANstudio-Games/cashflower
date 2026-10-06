@@ -4,6 +4,7 @@ import {
   shouldShowAd,
   getAdUnitId,
   AD_CONFIG,
+  AD_COUNTER_KEYS,
 } from '../src/config/ads';
 
 describe('AdMob Configuration and Frequency Logic', () => {
@@ -46,8 +47,15 @@ describe('AdMob Configuration and Frequency Logic', () => {
 
     it('uses configured production ID when isProd is true and prod ID is available', () => {
       const id = getAdUnitId('interstitial', true);
-      assert.ok(id);
+      assert.equal(id, 'ca-app-pub-2354120872211211/3632011796');
     });
+  });
+
+  it('keeps separate persistent counters for transactions, debts, and trading', () => {
+    assert.equal(AD_COUNTER_KEYS.transaction, 'ad_tx_save_count');
+    assert.equal(new Set(Object.values(AD_COUNTER_KEYS)).size, 3);
+    assert.equal(AD_COUNTER_KEYS.debt, 'ad_debt_save_count');
+    assert.equal(AD_COUNTER_KEYS.trading, 'ad_trading_save_count');
   });
 
   describe('AD_CONFIG', () => {
