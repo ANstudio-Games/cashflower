@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import { AppState } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import {
   Category,
@@ -41,7 +42,8 @@ import {
   addPlan,
   updatePlan,
   togglePlanPinned,
-  completePlan,
+  purchaseAllocatedPlan,
+  adjustPlanAllocation,
   deletePlan,
   getWallets,
   addWallet,
@@ -52,11 +54,17 @@ import {
   setSetting,
 } from '@/db';
 import { backupToGoogleDriveOrShare, restoreFromBackupFile } from '@/utils/backup';
-import { scheduleDailyReminder, scheduleDebtReminder, cancelDebtReminder } from '@/utils/notifications';
+import { reconcileReminders, cancelDebtReminder } from '@/utils/notifications';
+import { REMINDER_KEYS, ReminderStatus } from '@/utils/reminder-policy';
 import { useI18n } from '@/i18n';
 
 interface FinanceContextType {
   isLoading: boolean;
+  loadError: boolean;
+  dailyReminderEnabled: boolean;
+  debtReminderEnabled: boolean;
+  reminderStatus: { daily: ReminderStatus; debt: ReminderStatus };
+  setReminderEnabled: (kind: 'daily' | 'debt', enabled: boolean) => Promise<void>;
   transactions: Transaction[];
   categories: Category[];
   wallets: Wallet[];
@@ -96,6 +104,7 @@ interface FinanceContextType {
   editPlan: (item: Omit<FinancialPlan, 'created_at' | 'category_name' | 'category_icon' | 'category_color'>) => Promise<void>;
   togglePinPlan: (id: string, isPinned: boolean) => Promise<void>;
   fulfillPlan: (id: string, recordExpense: boolean) => Promise<void>;
+  adjustAllocation: (planId: string, walletId: string, amount: number, withdraw: boolean) => Promise<void>;
   deletePlanById: (id: string) => Promise<void>;
   isMultiWalletEnabled: boolean;
   setMultiWalletEnabled: (enabled: boolean) => Promise<void>;
@@ -108,9 +117,13 @@ const FinanceContext = createContext<FinanceContextType | null>(null);
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const db = useSQLiteContext();
   const { language } = useI18n();
-  const languageRef = useRef(language);
-  languageRef.current = language;
+  const reminderQueue = useRef<Promise<void>>(Promise.resolve());
+  const [dailyReminderEnabled, setDailyReminderEnabled] = useState(false);
+  const [debtReminderEnabled, setDebtReminderEnabled] = useState(false);
+  const [remindersReady, setRemindersReady] = useState(false);
+  const [reminderStatus, setReminderStatus] = useState<{ daily: ReminderStatus; debt: ReminderStatus }>({ daily: 'off', debt: 'off' });
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -156,6 +169,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         fetchedPlans,
         fetchedWallets,
         walletSettingVal,
+        dailySetting,
+        debtSetting,
       ] = await Promise.all([
         getCategories(db),
         getTransactions(db),
@@ -168,8 +183,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         getPlans(db),
         getWallets(db),
         getSetting(db, 'is_multi_wallet_enabled', 'true'),
+        getSetting(db, REMINDER_KEYS.daily, 'true'),
+        getSetting(db, REMINDER_KEYS.debt, 'true'),
       ]);
 
+      setDailyReminderEnabled(dailySetting === 'true');
+      setDebtReminderEnabled(debtSetting === 'true');
+      setRemindersReady(true);
+      setLoadError(false);
       setCategories(fetchedCategories);
       setTransactions(fetchedTransactions);
       setCashflowSummary(fetchedCashflow);
@@ -182,6 +203,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setWallets(fetchedWallets);
       setIsMultiWalletEnabled(walletSettingVal === 'true');
     } catch (err) {
+      setLoadError(true);
       console.error('Error refreshing finance data:', err);
     } finally {
       setIsLoading(false);
@@ -192,13 +214,32 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     refreshAll();
   }, [refreshAll]);
 
-  useEffect(() => {
-    scheduleDailyReminder(20, 0, languageRef.current);
-  }, []);
+  const syncReminders = useCallback((daily: boolean, debt: boolean, requestPermission = false) => {
+    const task = reminderQueue.current.then(async () => {
+      setReminderStatus({ daily: 'checking', debt: 'checking' });
+      setReminderStatus(await reconcileReminders(daily, debt, debts, language, requestPermission));
+    });
+    reminderQueue.current = task.catch(error => console.warn('Reminder sync failed:', error));
+    return task;
+  }, [debts, language]);
 
   useEffect(() => {
-    debts.forEach((debt) => scheduleDebtReminder(debt, languageRef.current));
-  }, [debts]);
+    if (remindersReady) void syncReminders(dailyReminderEnabled, debtReminderEnabled);
+  }, [remindersReady, dailyReminderEnabled, debtReminderEnabled, syncReminders]);
+
+  useEffect(() => {
+    const listener = AppState.addEventListener('change', state => {
+      if (state === 'active' && remindersReady) void syncReminders(dailyReminderEnabled, debtReminderEnabled);
+    });
+    return () => listener.remove();
+  }, [remindersReady, dailyReminderEnabled, debtReminderEnabled, syncReminders]);
+
+  const setReminderEnabled = async (kind: 'daily' | 'debt', enabled: boolean) => {
+    await setSetting(db, REMINDER_KEYS[kind], String(enabled));
+    if (kind === 'daily') setDailyReminderEnabled(enabled);
+    else setDebtReminderEnabled(enabled);
+    await syncReminders(kind === 'daily' ? enabled : dailyReminderEnabled, kind === 'debt' ? enabled : debtReminderEnabled, enabled);
+  };
 
   const triggerHaptic = () => {
     try {
@@ -225,6 +266,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const editTransaction = async (
     item: Omit<Transaction, 'category_name' | 'category_icon' | 'category_color' | 'wallet_name' | 'wallet_icon' | 'wallet_color' | 'destination_wallet_name'>
   ) => {
+    // Regular transaction editing must never remove a transfer destination.
+    if (item.type === 'transfer' || transactions.find(tx => tx.id === item.id)?.type === 'transfer') {
+      throw new Error('Transfers require a dedicated editor');
+    }
     await updateTransaction(db, item);
     triggerHaptic();
     await refreshAll();
@@ -292,7 +337,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       created_at: Date.now(),
     };
     await addDebt(db, newDebt);
-    scheduleDebtReminder(newDebt, language);
+    // Reminder reconciliation follows the refreshed debts and saved preferences.
     triggerHaptic();
     await refreshAll();
   };
@@ -416,32 +461,15 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const adjustAllocation = async (planId: string, walletId: string, amount: number, withdraw: boolean) => {
+    await adjustPlanAllocation(db, planId, walletId, amount, withdraw);
+    await refreshAll();
+  };
+
   const fulfillPlan = async (id: string, recordExpense: boolean) => {
     try {
-      const plan = plans.find((p) => p.id === id);
-      if (!plan) return;
-
-      if (recordExpense) {
-        const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        const today = new Date().toISOString().split('T')[0];
-        const defaultWalletId = wallets.length > 0 ? wallets[0].id : 'wallet_cash';
-        await addTransaction(db, {
-          id: txId,
-          title: plan.title,
-          amount: plan.target_amount,
-          type: 'expense',
-          category_id: plan.category_id || 'cat_shopping',
-          wallet_id: defaultWalletId,
-          destination_wallet_id: null,
-          date: today,
-          notes: plan.notes || null,
-          generated_kind: 'plan_purchase',
-          source_plan_id: plan.id,
-          created_at: Date.now(),
-        });
-      }
-
-      await completePlan(db, id, true);
+      if (!recordExpense) throw new Error('allocation_purchase_required');
+      await purchaseAllocatedPlan(db, id);
       triggerHaptic();
       await refreshAll();
     } catch (err) {
@@ -489,6 +517,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     <FinanceContext.Provider
       value={{
         isLoading,
+        loadError,
+        dailyReminderEnabled,
+        debtReminderEnabled,
+        reminderStatus,
+        setReminderEnabled,
         transactions,
         categories,
         wallets,
@@ -522,6 +555,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         editPlan,
         togglePinPlan,
         fulfillPlan,
+        adjustAllocation,
         deletePlanById,
         isMultiWalletEnabled,
         setMultiWalletEnabled,
