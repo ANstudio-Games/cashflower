@@ -20,12 +20,18 @@ import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWit
 import { getTodayISO } from '@/utils/format-date';
 import { InvestmentInstrument } from '@/types';
 import { useI18n } from '@/i18n';
+import { useSQLiteContext } from 'expo-sqlite';
+import { handleSavedWithAd } from '@/services/ad-service';
+import { useSaveAction } from '@/utils/use-save-action';
+import { isValidISODate } from '@/utils/validate-date';
 
 export default function AddInvestmentModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createInvestment } = useFinance();
+  const db = useSQLiteContext();
   const { t, language } = useI18n();
 
   const instruments: { id: InvestmentInstrument; label: string; icon: any }[] = [
@@ -63,6 +69,14 @@ export default function AddInvestmentModal() {
   const isProfit = pnl >= 0;
 
   const handleSave = async () => {
+    if (!isValidISODate(tradeDate)) {
+      Alert.alert(t('common_attention'), t('safety_invalid_date'));
+      return;
+    }
+    if (!rawSell || !Number.isFinite(sellPrice) || sellPrice < 0) {
+      Alert.alert(t('common_attention'), t('safety_sell_required'));
+      return;
+    }
     if (!assetName.trim()) {
       Alert.alert(t('common_attention'), t('inv_modal_err_asset'));
       return;
@@ -81,7 +95,7 @@ export default function AddInvestmentModal() {
         trade_date: tradeDate,
         notes: notes.trim() || null,
       });
-      router.back();
+      await handleSavedWithAd(db, 'trading', () => router.back());
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), t('inv_modal_err_save'));
@@ -94,7 +108,7 @@ export default function AddInvestmentModal() {
       style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('inv_modal_title')}</Text>
@@ -226,11 +240,16 @@ export default function AddInvestmentModal() {
 
         {/* Submit */}
         <Pressable
-          style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.85 }]}
-          onPress={handleSave}>
+          style={({ pressed }) => [styles.submitBtn, isSaving && { opacity: 0.65 }, pressed && { opacity: 0.85 }]}
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          onPress={() => { void runSave(handleSave); }}>
+          {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
           <Text style={styles.submitBtnText}>{t('inv_modal_save')}</Text>
-        </Pressable>
+                  </>)}
+</Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );

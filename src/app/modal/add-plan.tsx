@@ -17,11 +17,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { useI18n } from '@/i18n';
+import { useSaveAction } from '@/utils/use-save-action';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 
 export default function AddPlanModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const params = useLocalSearchParams<{ id?: string }>();
   const isEditing = Boolean(params.id);
   const { t, getCategoryName, language } = useI18n();
@@ -64,7 +66,7 @@ export default function AddPlanModal() {
   };
 
   const parsedAmount = parseInt(rawAmount, 10) || 0;
-  const currentBalance = Math.max(0, cashflowSummary.balance);
+  const currentBalance = Math.max(0, plans.find(plan => plan.id === params.id)?.allocated_amount || 0);
   const progressPct = parsedAmount > 0 ? Math.min(100, Math.max(0, (currentBalance / parsedAmount) * 100)) : 0;
   const isReady = parsedAmount > 0 && currentBalance >= parsedAmount;
 
@@ -120,7 +122,7 @@ export default function AddPlanModal() {
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { paddingTop: topPadding }]}>
-          <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>
@@ -155,7 +157,7 @@ export default function AddPlanModal() {
               <View style={styles.previewBox}>
                 <View style={styles.previewRow}>
                   <Text style={styles.previewLabel}>
-                    {t('plan_modal_current_cash', { amount: formatCurrency(currentBalance, language) })}
+                    {t('allocation_saved', { amount: formatCurrency(currentBalance, language) })}
                   </Text>
                   <Text
                     style={[
@@ -278,13 +280,18 @@ export default function AddPlanModal() {
 
           {/* Submit Button */}
           <Pressable
-            style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.9 }]}
-            onPress={handleSubmit}>
+            style={({ pressed }) => [styles.submitBtn, isSaving && { opacity: 0.65 }, pressed && { opacity: 0.9 }]}
+            disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityState={{ busy: isSaving, disabled: isSaving }}
+            onPress={() => { void runSave(handleSubmit); }}>
+            {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
             <Ionicons name="sparkles" size={18} color="#FFFFFF" />
             <Text style={styles.submitBtnText}>
               {isEditing ? t('plan_modal_submit_edit') : t('plan_modal_submit_add')}
             </Text>
-          </Pressable>
+                      </>)}
+</Pressable>
 
           <View style={{ height: 40 }} />
         </ScrollView>

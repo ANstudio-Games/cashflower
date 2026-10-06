@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
 import { useI18n } from '@/i18n';
+import { useSaveAction } from '@/utils/use-save-action';
 
 const AVAILABLE_ICONS = [
   'cart-outline',
@@ -51,6 +52,7 @@ const AVAILABLE_COLORS = [
 
 export default function AddCategoryModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createCategory } = useFinance();
@@ -85,7 +87,7 @@ export default function AddCategoryModal() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('cat_modal_title')}</Text>
@@ -141,6 +143,9 @@ export default function AddCategoryModal() {
               return (
                 <Pressable
                   key={color}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y_color', { name: color })}
+                  accessibilityState={{ selected: isSelected }}
                   style={[styles.colorCircle, { backgroundColor: color }]}
                   onPress={() => setSelectedColor(color)}>
                   {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
@@ -159,6 +164,9 @@ export default function AddCategoryModal() {
               return (
                 <Pressable
                   key={icon}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('a11y_icon', { name: icon })}
+                  accessibilityState={{ selected: isSelected }}
                   style={[
                     styles.iconBox,
                     isSelected && { borderColor: selectedColor, backgroundColor: `${selectedColor}15` },
@@ -177,10 +185,15 @@ export default function AddCategoryModal() {
 
         {/* Save Button */}
         <Pressable
-          style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}
-          onPress={handleSave}>
+          style={({ pressed }) => [styles.saveBtn, isSaving && { opacity: 0.65 }, pressed && { opacity: 0.85 }]}
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          onPress={() => { void runSave(handleSave); }}>
+          {isSaving ? <Text style={styles.saveBtnText}>{t('safety_saving')}</Text> : (<>
           <Text style={styles.saveBtnText}>{t('cat_save_btn')}</Text>
-        </Pressable>
+                  </>)}
+</Pressable>
       </ScrollView>
     </View>
   );
@@ -292,8 +305,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   colorCircle: {
-    width: 38,
-    height: 38,
+    width: 48,
+    height: 48,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
