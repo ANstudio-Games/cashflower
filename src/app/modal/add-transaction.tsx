@@ -22,9 +22,12 @@ import { getTodayISO } from '@/utils/format-date';
 import { TransactionType } from '@/types';
 import { useI18n } from '@/i18n';
 import { handleTransactionSavedWithAd } from '@/services/ad-service';
+import { useSaveAction } from '@/utils/use-save-action';
+import { isValidISODate } from '@/utils/validate-date';
 
 export default function AddTransactionModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
@@ -88,6 +91,14 @@ export default function AddTransactionModal() {
   };
 
   const handleSubmit = async () => {
+    if (params.id && transactions.find(item => item.id === params.id)?.type === 'transfer') {
+      Alert.alert(t('common_attention'), t('safety_transfer_edit'));
+      return;
+    }
+    if (!isValidISODate(date)) {
+      Alert.alert(t('common_attention'), t('safety_invalid_date'));
+      return;
+    }
     const amount = parseFloat(rawAmount);
     if (isNaN(amount) || amount <= 0) {
       Alert.alert(t('common_attention'), t('tx_modal_err_amount'));
@@ -138,7 +149,7 @@ export default function AddTransactionModal() {
       }
     } catch (err) {
       console.error(err);
-      Alert.alert(t('common_error'), isEditing ? t('tx_modal_err_update') : t('tx_modal_err_save'));
+      Alert.alert(t('common_error'), String(err).includes('allocation_') ? t('allocation_spend_blocked') : isEditing ? t('tx_modal_err_update') : t('tx_modal_err_save'));
     }
   };
 
@@ -148,7 +159,7 @@ export default function AddTransactionModal() {
       style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{isEditing ? t('tx_modal_edit_title') : t('tx_modal_add_title')}</Text>
@@ -368,13 +379,18 @@ export default function AddTransactionModal() {
 
         {/* Submit Button */}
         <Pressable
-          style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
-          onPress={handleSubmit}>
+          style={({ pressed }) => [styles.submitBtn, isSaving && { opacity: 0.65 }, pressed && styles.submitBtnPressed]}
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          onPress={() => { void runSave(handleSubmit); }}>
+          {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
           <Text style={styles.submitBtnText}>
             {isEditing ? t('tx_modal_save_edit') : t('tx_modal_save_add')}
           </Text>
-        </Pressable>
+                  </>)}
+</Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );

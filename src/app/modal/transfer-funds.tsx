@@ -19,9 +19,12 @@ import { colors } from '@/theme/colors';
 import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { useI18n } from '@/i18n';
+import { useSaveAction } from '@/utils/use-save-action';
+import { isValidISODate } from '@/utils/validate-date';
 
 export default function TransferFundsModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const params = useLocalSearchParams<{ sourceId?: string; destId?: string }>();
@@ -57,6 +60,10 @@ export default function TransferFundsModal() {
   };
 
   const handleSubmit = async () => {
+    if (!isValidISODate(date)) {
+      Alert.alert(t('common_attention'), t('safety_invalid_date'));
+      return;
+    }
     if (!sourceId || !destId) {
       Alert.alert(t('common_attention'), t('transfer_modal_err_select'));
       return;
@@ -81,7 +88,7 @@ export default function TransferFundsModal() {
       router.back();
     } catch (err: any) {
       console.error(err);
-      Alert.alert(t('common_error'), t('transfer_modal_err_failed'));
+      Alert.alert(t('common_error'), String(err).includes('allocation_') ? t('allocation_spend_blocked') : t('transfer_modal_err_failed'));
     }
   };
 
@@ -91,7 +98,7 @@ export default function TransferFundsModal() {
       style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('transfer_modal_title')}</Text>
@@ -141,7 +148,7 @@ export default function TransferFundsModal() {
         {/* Swap Button */}
         <View style={styles.swapRow}>
           <View style={styles.swapDivider} />
-          <Pressable style={styles.swapBtn} onPress={handleSwap}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_swap')} style={styles.swapBtn} onPress={handleSwap}>
             <Ionicons name="swap-vertical" size={20} color={colors.primary} />
           </Pressable>
           <View style={styles.swapDivider} />
@@ -258,11 +265,16 @@ export default function TransferFundsModal() {
 
         {/* Submit Button */}
         <Pressable
-          style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
-          onPress={handleSubmit}>
+          style={({ pressed }) => [styles.submitBtn, isSaving && { opacity: 0.65 }, pressed && styles.submitBtnPressed]}
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          onPress={() => { void runSave(handleSubmit); }}>
+          {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
           <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
           <Text style={styles.submitBtnText}>{t('transfer_modal_btn_confirm')}</Text>
-        </Pressable>
+                  </>)}
+</Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -349,8 +361,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   swapBtn: {
-    width: 38,
-    height: 38,
+    width: 48,
+    height: 48,
     borderRadius: 19,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,

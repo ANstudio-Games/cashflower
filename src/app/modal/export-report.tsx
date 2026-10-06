@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { useI18n } from '@/i18n';
+import { isValidISODate } from '@/utils/validate-date';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
@@ -142,6 +143,10 @@ export default function ExportReportModal() {
   }, [filteredTransactions]);
 
   const handleExport = async () => {
+    if (!isValidISODate(startDate) || !isValidISODate(endDate) || startDate > endDate) {
+      Alert.alert(t('common_attention'), t('safety_invalid_date'));
+      return;
+    }
     if (filteredTransactions.length === 0) {
       Alert.alert(t('export_empty_title'), t('export_empty_msg'));
       return;
@@ -181,7 +186,7 @@ export default function ExportReportModal() {
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { paddingTop: topPadding }]}>
-          <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>{t('export_header_title')}</Text>
