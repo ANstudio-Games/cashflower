@@ -42,3 +42,12 @@ example
 /ios
 /android
 *.apk
+
+# Local release signing credentials — back up securely, never commit
+/android/signing/
+
+# Agent & local tool state
+.claude/
+.pi/
+.impeccable/
+
