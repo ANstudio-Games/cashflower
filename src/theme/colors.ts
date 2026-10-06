@@ -7,44 +7,44 @@ export const colors = {
   
   text: '#0F172A',       // Slate 900 - high contrast deep text
   textSecondary: '#475569', // Slate 600 - clear readability
-  textMuted: '#94A3B8',  // Slate 400 - secondary cues
+  textMuted: '#64748B',  // Slate 400 - secondary cues
   
-  primary: '#0D9488',    // Emerald / Teal 600 - financial stability
+  primary: '#0F766E',    // Emerald / Teal 600 - financial stability
   primaryLight: '#CCFBF1',
   primarySoft: '#F0FDFA',
   primaryDark: '#0F766E',
 
   // Income / Profit
-  income: '#10B981',     // Emerald 500
+  income: '#047857',     // Emerald 500
   incomeSoft: '#ECFDF5',
   incomeDark: '#047857',
 
   // Expense / Loss
-  expense: '#EF4444',    // Red 500
+  expense: '#B91C1C',    // Red 500
   expenseSoft: '#FEF2F2',
   expenseDark: '#B91C1C',
 
   // Warning
-  warning: '#F59E0B',
+  warning: '#B45309',
   warningSoft: '#FFFBEB',
 
   // Hutang (Payable - You owe)
-  debt: '#F59E0B',       // Amber 500
+  debt: '#B45309',       // Amber 500
   debtSoft: '#FFFBEB',
   debtDark: '#B45309',
 
   // Piutang (Receivable - Money owed to you)
-  receivable: '#6366F1', // Indigo 500
+  receivable: '#4338CA', // Indigo 500
   receivableSoft: '#EEF2FF',
   receivableDark: '#4338CA',
 
   // Investment / Trading
-  investment: '#3B82F6', // Blue 500
+  investment: '#1D4ED8', // Blue 500
   investmentSoft: '#EFF6FF',
   investmentDark: '#1D4ED8',
 
   // Info
-  info: '#3B82F6',
+  info: '#1D4ED8',
   infoSoft: '#EFF6FF',
 
   shadow: 'rgba(15, 23, 42, 0.06)',
