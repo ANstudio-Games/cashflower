@@ -8,6 +8,7 @@ import { I18nProvider } from '@/i18n';
 import { FinanceProvider } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
 import { initializeAds } from '@/services/ad-service';
+import { FinanceDataGate } from '@/components/finance-data-gate';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -19,6 +20,7 @@ export default function RootLayout() {
       <SQLiteProvider databaseName={DB_NAME} onInit={initDatabase}>
         <I18nProvider>
           <FinanceProvider>
+            <FinanceDataGate>
             <Stack
             screenOptions={{
               headerShown: false,
@@ -61,6 +63,7 @@ export default function RootLayout() {
               name="modal/plans"
               options={{ presentation: 'modal', headerShown: false }}
             />
+            <Stack.Screen name="modal/plan-savings" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen
               name="modal/add-plan"
               options={{ presentation: 'modal', headerShown: false }}
@@ -78,6 +81,7 @@ export default function RootLayout() {
               options={{ presentation: 'modal', headerShown: false }}
             />
           </Stack>
+          </FinanceDataGate>
         </FinanceProvider>
       </I18nProvider>
     </SQLiteProvider>
