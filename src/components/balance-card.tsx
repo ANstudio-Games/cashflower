@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
@@ -10,23 +10,29 @@ interface BalanceCardProps {
   totalIncome: number;
   totalExpense: number;
   onAddPress: () => void;
+  reservedBalance?: number;
 }
 
-export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: BalanceCardProps) {
+export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress, reservedBalance = 0 }: BalanceCardProps) {
+  const { width, fontScale } = useWindowDimensions();
+  const stacked = width < 360 || fontScale > 1.2;
   const isPositive = balance >= 0;
   const { t, language } = useI18n();
 
   return (
     <View style={[styles.card, shadowStyles.md]}>
-      <View style={styles.topRow}>
-        <View>
+      <View style={[styles.topRow, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.label}>{t('home_total_balance')}</Text>
           <Text style={[styles.balanceAmount, !isPositive && styles.negativeBalance]}>
             {formatCurrency(balance, language)}
           </Text>
         </View>
         <Pressable
-          style={({ pressed }) => [styles.quickAddBtn, pressed && styles.quickAddBtnPressed]}
+          style={({ pressed }) => [styles.quickAddBtn, stacked && { alignSelf: 'flex-start' }, pressed && styles.quickAddBtnPressed]}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel={t('home_record_quick')}
           onPress={onAddPress}>
           <Ionicons name="add" size={20} color="#FFFFFF" />
           <Text style={styles.quickAddBtnText}>{t('home_record_quick')}</Text>
@@ -35,9 +41,9 @@ export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: 
 
       <View style={styles.divider} />
 
-      <View style={styles.statsRow}>
+      <View style={[styles.statsRow, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
         {/* Pemasukan / Income */}
-        <View style={styles.statItem}>
+        <View style={[styles.statItem, stacked && { flexBasis: 'auto', flexGrow: 0 }]}>
           <View style={[styles.iconPill, { backgroundColor: colors.incomeSoft }]}>
             <Ionicons name="arrow-down-outline" size={16} color={colors.income} />
           </View>
@@ -49,10 +55,10 @@ export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: 
           </View>
         </View>
 
-        <View style={styles.verticalDivider} />
+        {!stacked && <View style={styles.verticalDivider} />}
 
         {/* Pengeluaran / Expense */}
-        <View style={styles.statItem}>
+        <View style={[styles.statItem, stacked && { flexBasis: 'auto', flexGrow: 0 }]}>
           <View style={[styles.iconPill, { backgroundColor: colors.expenseSoft }]}>
             <Ionicons name="arrow-up-outline" size={16} color={colors.expense} />
           </View>
@@ -64,6 +70,12 @@ export function BalanceCard({ balance, totalIncome, totalExpense, onAddPress }: 
           </View>
         </View>
       </View>
+      {reservedBalance > 0 && (
+        <View style={styles.allocationSummary}>
+          <Text style={styles.statLabel}>{t('allocation_saved', { amount: formatCurrency(reservedBalance, language) })}</Text>
+          <Text style={[styles.statValue, { color: colors.primaryDark }]}>{t('allocation_free', { amount: formatCurrency(balance - reservedBalance, language) })}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -80,8 +92,8 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   label: {
     fontSize: 13,
@@ -101,11 +113,13 @@ const styles = StyleSheet.create({
     color: colors.expense,
   },
   quickAddBtn: {
+    minHeight: 36,
+    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 12,
     gap: 4,
   },
@@ -125,10 +139,13 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
+    alignItems: 'flex-start',
   },
   statItem: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 0,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -155,8 +172,14 @@ const styles = StyleSheet.create({
   },
   verticalDivider: {
     width: 1,
-    height: 32,
-    backgroundColor: colors.borderLight,
-    marginHorizontal: 12,
+    alignSelf: 'stretch',
+    backgroundColor: colors.border,
+  },
+  allocationSummary: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 4,
   },
 });
