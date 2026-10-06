@@ -20,12 +20,18 @@ import { formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-cu
 import { getTodayISO } from '@/utils/format-date';
 import { DebtType } from '@/types';
 import { useI18n } from '@/i18n';
+import { useSQLiteContext } from 'expo-sqlite';
+import { handleSavedWithAd } from '@/services/ad-service';
+import { useSaveAction } from '@/utils/use-save-action';
+import { isValidISODate } from '@/utils/validate-date';
 
 export default function AddDebtModal() {
   const router = useRouter();
+  const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { createDebt } = useFinance();
+  const db = useSQLiteContext();
   const { t, language } = useI18n();
 
   const [type, setType] = useState<DebtType>('receivable'); // default: Piutang (orang pinjam ke saya)
@@ -42,6 +48,10 @@ export default function AddDebtModal() {
   };
 
   const handleSave = async () => {
+    if (!isValidISODate(issueDate) || (dueDate !== '' && (!isValidISODate(dueDate) || dueDate < issueDate))) {
+      Alert.alert(t('common_attention'), t('safety_invalid_date'));
+      return;
+    }
     const amount = parseInt(rawAmount, 10);
     if (!amount || amount <= 0) {
       Alert.alert(t('common_attention'), t('debt_modal_err_amount'));
@@ -62,7 +72,7 @@ export default function AddDebtModal() {
         is_paid: 0,
         notes: notes.trim() || null,
       });
-      router.back();
+      await handleSavedWithAd(db, 'debt', () => router.back());
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), t('debt_modal_err_save'));
@@ -77,7 +87,7 @@ export default function AddDebtModal() {
       style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('debt_modal_title')}</Text>
@@ -190,11 +200,16 @@ export default function AddDebtModal() {
 
         {/* Save Button */}
         <Pressable
-          style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.85 }]}
-          onPress={handleSave}>
+          style={({ pressed }) => [styles.submitBtn, isSaving && { opacity: 0.65 }, pressed && { opacity: 0.85 }]}
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          onPress={() => { void runSave(handleSave); }}>
+          {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
           <Text style={styles.submitBtnText}>{t('debt_modal_save')}</Text>
-        </Pressable>
+                  </>)}
+</Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );

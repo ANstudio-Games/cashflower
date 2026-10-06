@@ -21,6 +21,7 @@ import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWit
 import { getTodayISO } from '@/utils/format-date';
 import { DebtPayment } from '@/types';
 import { useI18n } from '@/i18n';
+import { isValidISODate } from '@/utils/validate-date';
 
 export default function DebtDetailModal() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function DebtDetailModal() {
 
   const [payments, setPayments] = useState<DebtPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [paymentLoadError, setPaymentLoadError] = useState(false);
 
   // Payment form state
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -68,7 +70,9 @@ export default function DebtDetailModal() {
       setLoadingPayments(true);
       const list = await getDebtPayments(id);
       setPayments(list);
+      setPaymentLoadError(false);
     } catch (err) {
+      setPaymentLoadError(true);
       console.error('Error fetching debt payments:', err);
     } finally {
       setLoadingPayments(false);
@@ -83,7 +87,7 @@ export default function DebtDetailModal() {
     return (
       <View style={[styles.container, { paddingTop: topPadding }]}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>{t('common_attention')}</Text>
@@ -132,6 +136,10 @@ export default function DebtDetailModal() {
   };
 
   const handleSavePayment = async () => {
+    if (!isValidISODate(paymentDate)) {
+      Alert.alert(t('common_attention'), t('safety_invalid_date'));
+      return;
+    }
     const amount = parseInt(rawAmount, 10);
     if (!amount || amount <= 0) {
       Alert.alert(t('common_attention'), t('debt_detail_err_amount'));
@@ -218,7 +226,7 @@ export default function DebtDetailModal() {
       style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>
@@ -557,6 +565,13 @@ export default function DebtDetailModal() {
           {loadingPayments ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : paymentLoadError ? (
+            <View style={styles.noHistoryCard}>
+              <Text accessibilityRole="alert" style={styles.noHistoryText}>{t('safety_load_error')}</Text>
+              <Pressable accessibilityRole="button" onPress={loadPayments} style={{ minHeight: 48, justifyContent: 'center' }}>
+                <Text style={{ color: colors.primaryDark }}>{t('safety_retry')}</Text>
+              </Pressable>
             </View>
           ) : payments.length === 0 ? (
             <View style={styles.noHistoryCard}>
