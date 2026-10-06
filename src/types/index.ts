@@ -129,7 +129,10 @@ export interface InvestmentSummary {
   netReturnPercentage: number;
 }
 
+export interface PlanAllocation { plan_id: string; wallet_id: string; amount: number; }
+
 export interface FinancialPlan {
+  allocated_amount?: number;
   id: string;
   title: string;             // Nama barang / rencana (e.g. Beli Laptop ROG)
   target_amount: number;     // Nominal target Rp
@@ -155,6 +158,7 @@ export interface BackupData {
   investments: Investment[];
   budgets: Budget[];
   plans?: FinancialPlan[];
+  plan_allocations?: PlanAllocation[];
   wallets?: Wallet[];
   settings?: {
     isMultiWalletEnabled?: boolean;
