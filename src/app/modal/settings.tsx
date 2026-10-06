@@ -16,12 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { useI18n, LANGUAGES, Language } from '@/i18n';
 import { colors } from '@/theme/colors';
-import {
-  scheduleDailyReminder,
-  cancelDailyReminder,
-  scheduleDebtReminder,
-  cancelDebtReminder,
-} from '@/utils/notifications';
+import { useSaveAction } from '@/utils/use-save-action';
 
 export default function SettingsModal() {
   const router = useRouter();
@@ -37,11 +32,14 @@ export default function SettingsModal() {
     wallets,
     isMultiWalletEnabled,
     setMultiWalletEnabled,
+    dailyReminderEnabled,
+    debtReminderEnabled,
+    reminderStatus,
+    setReminderEnabled,
   } = useFinance();
   const { language, setLanguage, t } = useI18n();
 
-  const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
-  const [debtReminderEnabled, setDebtReminderEnabled] = useState(true);
+  const { isSaving: changingReminder, runSave: changeReminder } = useSaveAction();
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
@@ -91,35 +89,22 @@ export default function SettingsModal() {
     );
   };
 
-  const toggleDailyReminder = async (val: boolean) => {
-    setDailyReminderEnabled(val);
-    if (val) {
-      await scheduleDailyReminder(20, 0, language);
-      Alert.alert(t('settings_reminder_active'), t('settings_reminder_daily_alert'));
-    } else {
-      await cancelDailyReminder();
-    }
+  const toggleReminder = (kind: 'daily' | 'debt', val: boolean) => {
+    void changeReminder(async () => {
+      try { await setReminderEnabled(kind, val); }
+      catch { Alert.alert(t('common_error'), t('reminder_status_error')); }
+    });
   };
 
   const handleLanguageChange = async (nextLanguage: Language) => {
     await setLanguage(nextLanguage);
-    if (dailyReminderEnabled) {
-      await scheduleDailyReminder(20, 0, nextLanguage);
-    } else {
-      await cancelDailyReminder();
-    }
-    if (debtReminderEnabled) {
-      await Promise.all(debts.map((debt) => scheduleDebtReminder(debt, nextLanguage)));
-    } else {
-      await Promise.all(debts.map((debt) => cancelDebtReminder(debt.id)));
-    }
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('settings_header_title')}</Text>
@@ -261,10 +246,12 @@ export default function SettingsModal() {
             <View style={styles.actionInfo}>
               <Text style={styles.actionTitle}>{t('settings_reminder_daily_title')}</Text>
               <Text style={styles.actionDesc}>{t('settings_reminder_daily_desc')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`reminder_status_${reminderStatus.daily}`)}</Text>
             </View>
             <Switch
               value={dailyReminderEnabled}
-              onValueChange={toggleDailyReminder}
+              disabled={changingReminder}
+              onValueChange={val => toggleReminder('daily', val)}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor="#FFFFFF"
             />
@@ -279,10 +266,12 @@ export default function SettingsModal() {
             <View style={styles.actionInfo}>
               <Text style={styles.actionTitle}>{t('settings_reminder_debt_title')}</Text>
               <Text style={styles.actionDesc}>{t('settings_reminder_debt_desc')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`reminder_status_${reminderStatus.debt}`)}</Text>
             </View>
             <Switch
               value={debtReminderEnabled}
-              onValueChange={setDebtReminderEnabled}
+              disabled={changingReminder}
+              onValueChange={val => toggleReminder('debt', val)}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor="#FFFFFF"
             />

@@ -59,9 +59,8 @@ export default function HomeScreen() {
   if (budgetPct >= 70 && !isOver) budgetColor = colors.warning;
   if (isOver) budgetColor = colors.expense;
 
-  const displayedBalance = isMultiWalletEnabled
-    ? (cashflowSummary.totalWalletBalance ?? cashflowSummary.balance)
-    : cashflowSummary.balance;
+  const displayedBalance = cashflowSummary.totalWalletBalance ?? cashflowSummary.balance;
+  const reservedBalance = plans.reduce((sum, plan) => sum + (plan.allocated_amount || 0), 0);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -78,12 +77,17 @@ export default function HomeScreen() {
         <View style={styles.headerActions}>
           <Pressable
             style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.8 }]}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y_settings')}
             onPress={() => router.push('/modal/settings')}>
             <Ionicons name="settings-outline" size={20} color={colors.text} />
           </Pressable>
 
           <Pressable
             style={({ pressed }) => [styles.addHeaderBtn, pressed && { opacity: 0.8 }]}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y_add')}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => router.push('/modal/add-transaction')}>
             <Ionicons name="add" size={22} color="#FFFFFF" />
           </Pressable>
@@ -97,6 +101,7 @@ export default function HomeScreen() {
         {/* Main Cash Balance Card */}
         <BalanceCard
           balance={displayedBalance}
+          reservedBalance={reservedBalance}
           totalIncome={cashflowSummary.totalIncome}
           totalExpense={cashflowSummary.totalExpense}
           onAddPress={() => router.push('/modal/add-transaction')}
@@ -304,7 +309,7 @@ export default function HomeScreen() {
             </Text>
             <Text style={styles.widgetSubtext}>
               {investmentSummary.totalTrades > 0
-                ? `${investmentSummary.winCount}W / ${investmentSummary.lossCount}L (${investmentSummary.netReturnPercentage.toFixed(1)}%)`
+                ? `${investmentSummary.winCount} ${t('clarity_profitable')} / ${investmentSummary.lossCount} ${t('clarity_losing')}`
                 : t('home_no_trades')}
             </Text>
           </Pressable>
@@ -387,8 +392,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   settingsBtn: {
-    width: 38,
-    height: 38,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -397,8 +402,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addHeaderBtn: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     backgroundColor: colors.primary,
     justifyContent: 'center',
