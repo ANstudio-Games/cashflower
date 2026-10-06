@@ -87,7 +87,7 @@ export default function InvestmentsScreen() {
                 { color: isNetProfit ? colors.incomeDark : colors.expenseDark },
               ]}>
               {isNetProfit ? '+' : ''}
-              {investmentSummary.netReturnPercentage.toFixed(1)}% ROI
+              {investmentSummary.netReturnPercentage.toFixed(1)}% {t('clarity_return')}
             </Text>
           </View>
         </View>
@@ -109,8 +109,8 @@ export default function InvestmentsScreen() {
           <View style={styles.statCol}>
             <Text style={styles.statColLabel}>{t('inv_win_loss')}</Text>
             <Text style={styles.statColVal}>
-              <Text style={{ color: colors.incomeDark }}>{investmentSummary.winCount}W</Text> :{' '}
-              <Text style={{ color: colors.expenseDark }}>{investmentSummary.lossCount}L</Text>
+              <Text style={{ color: colors.incomeDark }}>{investmentSummary.winCount} {t('clarity_profitable')}</Text> :{' '}
+              <Text style={{ color: colors.expenseDark }}>{investmentSummary.lossCount} {t('clarity_losing')}</Text>
             </Text>
           </View>
         </View>
@@ -154,8 +154,8 @@ export default function InvestmentsScreen() {
             icon="trending-up-outline"
             title={t('inv_empty_title')}
             description={t('inv_empty_desc')}
-            actionText={t('inv_record_action')}
-            onActionPress={() => router.push('/modal/add-investment')}
+            actionText={t(selectedInstrument !== 'all' ? 'clarity_reset_filters' : 'inv_record_action')}
+            onActionPress={() => selectedInstrument !== 'all' ? setSelectedInstrument('all') : router.push('/modal/add-investment')}
           />
         }
       />
@@ -187,8 +187,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addBtn: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: colors.primary,
     justifyContent: 'center',

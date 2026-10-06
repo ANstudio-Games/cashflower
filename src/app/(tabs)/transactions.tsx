@@ -292,8 +292,12 @@ export default function TransactionsScreen() {
                 ? t('tx_empty_desc_filtered')
                 : t('tx_empty_desc_empty')
             }
-            actionText={t('tx_record_action')}
-            onActionPress={() => router.push('/modal/add-transaction')}
+            actionText={t(search || typeFilter !== 'all' || categoryFilter !== 'all' || walletFilter !== 'all' ? 'clarity_reset_filters' : 'tx_record_action')}
+            onActionPress={() => {
+              if (search || typeFilter !== 'all' || categoryFilter !== 'all' || walletFilter !== 'all') {
+                setSearch(''); setTypeFilter('all'); setCategoryFilter('all'); setWalletFilter('all');
+              } else router.push('/modal/add-transaction');
+            }}
           />
         }
       />
@@ -330,8 +334,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   exportBtn: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
@@ -350,8 +354,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addBtn: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: colors.primary,
     justifyContent: 'center',
