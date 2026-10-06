@@ -30,7 +30,7 @@ export function PlanItem({
   const { t, language, formatDateShort, getCategoryName } = useI18n();
   const isCompleted = plan.is_completed === 1;
   const target = plan.target_amount || 1;
-  const balance = Math.max(0, currentBalance);
+  const balance = Math.max(0, plan.allocated_amount || 0);
   const progressPct = isCompleted
     ? 100
     : Math.min(100, Math.max(0, (balance / target) * 100));
@@ -49,10 +49,10 @@ export function PlanItem({
     statusColor = colors.incomeDark;
     statusBg = colors.incomeSoft;
     statusText = t('plan_status_ready');
-  } else if (currentBalance <= 0) {
+  } else if (balance <= 0) {
     statusColor = colors.expense;
     statusBg = colors.expenseSoft;
-    statusText = t('plan_status_empty_balance');
+    statusText = t('allocation_empty');
   }
 
   return (
@@ -93,7 +93,9 @@ export function PlanItem({
         <View style={styles.topActions}>
           {!isCompleted && onTogglePin && (
             <Pressable
-              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y_pin', { name: plan.title })}
+              accessibilityState={{ selected: plan.is_pinned === 1 }}
               onPress={() => onTogglePin(plan.id, plan.is_pinned !== 1)}
               style={styles.pinBtn}>
               <Ionicons
@@ -105,13 +107,13 @@ export function PlanItem({
           )}
 
           {!compact && onEdit && !isCompleted && (
-            <Pressable hitSlop={8} onPress={() => onEdit(plan)} style={styles.actionBtn}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_edit', { name: plan.title })} onPress={() => onEdit(plan)} style={styles.actionBtn}>
               <Ionicons name="pencil-outline" size={17} color={colors.textSecondary} />
             </Pressable>
           )}
 
           {!compact && onDelete && (
-            <Pressable hitSlop={8} onPress={() => onDelete(plan.id, plan.title)} style={styles.actionBtn}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_delete', { name: plan.title })} onPress={() => onDelete(plan.id, plan.title)} style={styles.actionBtn}>
               <Ionicons name="trash-outline" size={17} color={colors.expense} />
             </Pressable>
           )}
@@ -147,7 +149,7 @@ export function PlanItem({
           <Text style={styles.progressSub}>
             {isCompleted
               ? t('plan_fulfilled_desc')
-              : t('plan_current_cash', { balance: formatCurrency(balance, language) })}
+              : t('allocation_saved', { amount: formatCurrency(balance, language) })}
           </Text>
           <Text
             style={[
@@ -249,10 +251,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pinBtn: {
-    padding: 4,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',    padding: 4,
   },
   actionBtn: {
-    padding: 4,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',    padding: 4,
     marginLeft: 2,
   },
   amountRow: {

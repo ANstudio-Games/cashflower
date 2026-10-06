@@ -62,7 +62,7 @@ export default function PlansModal() {
   };
 
   const handleDelete = (id: string, title: string) => {
-    Alert.alert(t('plans_delete_title'), t('plans_delete_msg', { title }), [
+    Alert.alert(t('plans_delete_title'), t('allocation_delete_msg', { title }), [
       { text: t('common_cancel'), style: 'cancel' },
       {
         text: t('common_delete'),
@@ -88,17 +88,6 @@ export default function PlansModal() {
       [
         { text: t('common_cancel'), style: 'cancel' },
         {
-          text: t('plans_fulfill_btn_mark_only'),
-          onPress: async () => {
-            try {
-              await fulfillPlan(id, false);
-              Alert.alert(t('common_success'), t('plans_fulfill_mark_success', { title: plan.title }));
-            } catch (err) {
-              Alert.alert(t('common_error'), t('plans_fulfill_err'));
-            }
-          },
-        },
-        {
           text: t('plans_fulfill_btn_buy_record'),
           onPress: async () => {
             try {
@@ -123,7 +112,7 @@ export default function PlansModal() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('plans_modal_title')}</Text>
@@ -198,7 +187,7 @@ export default function PlansModal() {
             onFulfill={handleFulfill}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onPress={() => handleEdit(item)}
+            onPress={() => router.push({ pathname: '/modal/plan-savings', params: { id: item.id } })}
           />
         )}
         ListEmptyComponent={
@@ -206,12 +195,12 @@ export default function PlansModal() {
             icon={activeTab === 'active' ? 'flag-outline' : 'trophy-outline'}
             title={activeTab === 'active' ? t('plans_empty_active_title') : t('plans_empty_completed_title')}
             description={
-              activeTab === 'active'
+              search.trim() ? t('tx_empty_desc_filtered') : activeTab === 'active'
                 ? t('plans_empty_active_desc')
                 : t('plans_empty_completed_desc')
             }
-            actionText={activeTab === 'active' ? t('plans_empty_active_btn') : undefined}
-            onActionPress={activeTab === 'active' ? () => router.push('/modal/add-plan') : undefined}
+            actionText={search.trim() ? t('clarity_reset_filters') : activeTab === 'active' ? t('plans_empty_active_btn') : undefined}
+            onActionPress={search.trim() ? () => setSearch('') : activeTab === 'active' ? () => router.push('/modal/add-plan') : undefined}
           />
         }
       />
