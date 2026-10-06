@@ -204,6 +204,8 @@ export function DebtItem({ item, onPress, onTogglePaid, onDelete }: DebtItemProp
 
           <Pressable
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y_delete', { name: item.person_name })}
             onPress={handleDelete}
             style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
@@ -367,7 +369,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   actionBtn: {
-    paddingHorizontal: 10,
+    minHeight: 48,
+    justifyContent: 'center',    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
   },
@@ -382,6 +385,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   deleteBtn: {
-    padding: 4,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',    padding: 4,
   },
 });

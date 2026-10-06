@@ -91,6 +91,8 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
         </Text>
         <Pressable
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('a11y_delete', { name: item.asset_name })}
           onPress={handleDelete}
           style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.6 }]}>
           <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
@@ -191,7 +193,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   deleteBtn: {
-    padding: 2,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',    padding: 2,
     marginLeft: 8,
   },
 });

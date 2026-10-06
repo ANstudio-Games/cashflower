@@ -63,7 +63,7 @@ export function TransactionItem({
   return (
     <Pressable
       style={({ pressed }) => [styles.container, pressed && onEdit && styles.containerPressed]}
-      onPress={() => onEdit && onEdit(item)}>
+      onPress={() => !isTransfer && onEdit && onEdit(item)}>
       {/* Category / Transfer Icon */}
       <View style={[styles.iconCircle, { backgroundColor: `${categoryColor}18` }]}>
         <Ionicons name={iconName} size={20} color={categoryColor} />
@@ -137,7 +137,8 @@ export function TransactionItem({
         <View style={styles.actionRow}>
           {onEdit && !isTransfer ? (
             <Pressable
-              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y_edit', { name: item.title })}
               onPress={() => onEdit(item)}
               style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}>
               <Ionicons name="pencil-outline" size={15} color={colors.primary} />
@@ -146,7 +147,8 @@ export function TransactionItem({
 
           {onDelete ? (
             <Pressable
-              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y_delete', { name: item.title })}
               onPress={handleDelete}
               style={({ pressed }) => [styles.actionIconBtn, pressed && { opacity: 0.6 }]}>
               <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
@@ -161,6 +163,7 @@ export function TransactionItem({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -214,6 +217,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   rightSection: {
+    width: '100%',
     alignItems: 'flex-end',
     justifyContent: 'center',
     marginLeft: 8,
@@ -250,6 +254,10 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   actionIconBtn: {
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 3,
   },
 });
