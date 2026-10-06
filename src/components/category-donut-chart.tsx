@@ -127,7 +127,7 @@ export function CategoryDonutChart({ data, totalExpense }: CategoryDonutChartPro
 
       {/* Category breakdown list */}
       <View style={styles.categoryList}>
-        {safeData.slice(0, 6).map((item, index) => {
+        {safeData.map((item, index) => {
           const itemPct = typeof item.percentage === 'number' && !isNaN(item.percentage) ? item.percentage : 0;
           return (
             <View key={item.categoryId || index} style={styles.categoryRow}>
