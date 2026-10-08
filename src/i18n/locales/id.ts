@@ -1,6 +1,16 @@
 import { TranslationDictionary } from '../types';
 
 export const id: TranslationDictionary = {
+  update_section: 'Pembaruan aplikasi',
+  update_check: 'Cek pembaruan',
+  update_checking: 'Memeriksa pembaruan…',
+  update_downloading: 'Mengunduh… {progress}%',
+  update_install: 'Unduh / coba lagi pembaruan',
+  update_current: 'Terpasang: {version}',
+  update_new: 'Tersedia: {version}',
+  update_latest: 'Kamu memakai versi rilis terbaru.',
+  update_error: 'Pembaruan gagal. Periksa koneksi lalu coba lagi. Release harus dapat diakses publik.',
+  update_permission: 'Android akan meminta konfirmasi pemasangan. Jika diminta, izinkan pemasangan dari Cashflower lalu ketuk di sini lagi. Jangan hapus aplikasi.',
   clarity_reset_filters: "Reset pencarian & filter",
   clarity_debts_first: "Belum ada catatan hutang atau piutang. Catat pinjaman pertama untuk mulai memantau pembayaran.",
   clarity_return: "hasil atas modal",
@@ -597,6 +607,7 @@ export const id: TranslationDictionary = {
   report_total_income: 'Total Pemasukan',
   report_total_expense: 'Total Pengeluaran',
   report_net_cashflow: 'Arus Kas Bersih (Surplus / Defisit)',
+  report_current_wallet_balance: 'Saldo Total Dompet Saat Ekspor',
   report_total_transactions: 'Total Transaksi',
   report_no: 'No',
   report_date: 'Tanggal',
