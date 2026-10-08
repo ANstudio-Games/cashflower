@@ -22,6 +22,24 @@ test('CI signs release builds with secrets without changing debug signing', () =
   }
 });
 
+test('release signing accepts Expo template comments before signingConfig', () => {
+  const source = `android {
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Caution! In production, generate your own keystore.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
+        }
+    }
+}`;
+  const result = configureAndroid(source);
+  assert.match(result, /signingConfig signingConfigs.ciRelease/);
+  assert.match(result, /debug\s*\{\s*signingConfig signingConfigs.debug/);
+});
+
 test('Android setup does not request the obsolete tools package', () => {
   const workflow = readFileSync('.github/workflows/android-release.yml', 'utf8');
   assert.match(workflow, /uses: android-actions\/setup-android@v3\s+with:[\s\S]*?packages: platform-tools/);

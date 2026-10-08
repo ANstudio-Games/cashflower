@@ -3,7 +3,7 @@ const fs = require('node:fs');
 function configureAndroid(source) {
   const marker = '    buildTypes {';
   if (!source.includes(marker)) throw new Error('Android buildTypes block not found');
-  const releasePattern = /(release\s*\{\s*)signingConfig signingConfigs\.debug/;
+  const releasePattern = /(release\s*\{(?:\s|\/\/[^\r\n]*(?:\r?\n|$)|\/\*[\s\S]*?\*\/)*)signingConfig signingConfigs\.debug\b/;
   if (!releasePattern.test(source)) throw new Error('Expected Expo release signing configuration not found');
   const signing = `    signingConfigs {
         ciRelease {
