@@ -246,7 +246,6 @@ export default function SettingsModal() {
             <View style={styles.actionInfo}>
               <Text style={styles.actionTitle}>{t('settings_reminder_daily_title')}</Text>
               <Text style={styles.actionDesc}>{t('settings_reminder_daily_desc')}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`reminder_status_${reminderStatus.daily}`)}</Text>
             </View>
             <Switch
               value={dailyReminderEnabled}
@@ -266,7 +265,6 @@ export default function SettingsModal() {
             <View style={styles.actionInfo}>
               <Text style={styles.actionTitle}>{t('settings_reminder_debt_title')}</Text>
               <Text style={styles.actionDesc}>{t('settings_reminder_debt_desc')}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`reminder_status_${reminderStatus.debt}`)}</Text>
             </View>
             <Switch
               value={debtReminderEnabled}

@@ -9,7 +9,6 @@ import { CategoryDonutChart } from '@/components/category-donut-chart';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
 import { useI18n } from '@/i18n';
-import { savingsRate as calculateSavingsRate } from '@/utils/savings-rate';
 
 // Error boundary to prevent any chart error from crashing the entire app
 class ChartErrorBoundary extends Component<{ children: ReactNode; title: string; fallbackText: string }, { hasError: boolean }> {
@@ -81,7 +80,10 @@ export default function AnalyticsScreen() {
   const savingsRate = useMemo(() => {
     const income = cashflowSummary?.totalIncome || 0;
     const expense = cashflowSummary?.totalExpense || 0;
-    return calculateSavingsRate(income, expense);
+    if (income <= 0) return 0;
+    const saved = income - expense;
+    const rate = (saved / income) * 100;
+    return isNaN(rate) ? 0 : Math.max(0, Math.min(100, rate));
   }, [cashflowSummary]);
 
   return (
@@ -101,7 +103,6 @@ export default function AnalyticsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>{t('clarity_all_time')}</Text>
         {/* KPI Cards Row */}
         <View style={styles.kpiRow}>
           <View style={[styles.kpiCard, shadowStyles.sm]}>
@@ -134,14 +135,12 @@ export default function AnalyticsScreen() {
               <Text style={styles.savingsTitle}>{t('analytics_savings_rate')}</Text>
               <Text style={styles.savingsSub}>{t('analytics_savings_desc')}</Text>
             </View>
-            <Text style={[styles.savingsPercent, { color: savingsRate !== null && savingsRate < 0 ? colors.expenseDark : colors.primaryDark }]}>{savingsRate === null ? '—' : `${savingsRate.toFixed(1)}%`}</Text>
+            <Text style={styles.savingsPercent}>{savingsRate.toFixed(1)}%</Text>
           </View>
           <View style={styles.savingsTrack}>
-            <View style={[styles.savingsFill, { width: `${Math.max(0, Math.min(100, savingsRate ?? 0))}%` }]} />
+            <View style={[styles.savingsFill, { width: `${savingsRate}%` }]} />
           </View>
         </View>
-
-        <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>{t(savingsRate === null ? 'clarity_rate_unavailable' : savingsRate < 0 ? 'clarity_deficit' : 'clarity_rate_meaning')}</Text>
 
         {/* Section: Tren Waktu (Bar Chart) */}
         <View style={styles.sectionTitleRow}>
@@ -149,10 +148,7 @@ export default function AnalyticsScreen() {
           <Text style={styles.sectionTitle}>{t('analytics_trend_title')}</Text>
         </View>
         <ChartErrorBoundary title={t('analytics_trend_title')} fallbackText={t('analytics_chart_error')}>
-          <View>
-            <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>{t('clarity_chart_period')}</Text>
-            <CashflowBarChart transactions={transactions} />
-          </View>
+          <CashflowBarChart transactions={transactions} />
         </ChartErrorBoundary>
 
         {/* Section: Donut Chart Kategori */}
@@ -160,7 +156,6 @@ export default function AnalyticsScreen() {
           <Ionicons name="pie-chart" size={18} color={colors.primary} />
           <Text style={styles.sectionTitle}>{t('analytics_category_title')}</Text>
         </View>
-        <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>{t('clarity_all_time')}</Text>
         <ChartErrorBoundary title={t('analytics_category_title')} fallbackText={t('analytics_chart_error')}>
           <CategoryDonutChart
             data={categoryBreakdown}

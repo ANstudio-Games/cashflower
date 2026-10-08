@@ -52,7 +52,7 @@ export function PlanItem({
   } else if (balance <= 0) {
     statusColor = colors.expense;
     statusBg = colors.expenseSoft;
-    statusText = t('allocation_empty');
+    statusText = t('plan_status_empty_balance');
   }
 
   return (
@@ -149,7 +149,7 @@ export function PlanItem({
           <Text style={styles.progressSub}>
             {isCompleted
               ? t('plan_fulfilled_desc')
-              : t('allocation_saved', { amount: formatCurrency(balance, language) })}
+              : t('plan_current_cash', { balance: formatCurrency(balance, language) })}
           </Text>
           <Text
             style={[
@@ -251,16 +251,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pinBtn: {
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',    padding: 4,
+    padding: 4,
   },
   actionBtn: {
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',    padding: 4,
+    padding: 4,
     marginLeft: 2,
   },
   amountRow: {

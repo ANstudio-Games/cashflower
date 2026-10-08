@@ -78,7 +78,7 @@ export function TransactionItem({
           {isTransfer ? (
             <View style={[styles.walletBadge, { backgroundColor: '#EEF2FF' }]}>
               <Ionicons name="swap-horizontal" size={11} color="#6366F1" />
-              <Text style={[styles.walletBadgeText, { color: '#6366F1' }]}>
+              <Text style={[styles.walletBadgeText, { color: '#6366F1' }]} numberOfLines={1}>
                 {walletName} ➔ {destinationWalletName}
               </Text>
             </View>
@@ -101,16 +101,16 @@ export function TransactionItem({
                       {walletName}
                     </Text>
                   </View>
-                  <Text style={styles.dot}>•</Text>
                 </>
               )}
-              <Text style={styles.categoryName}>
+              <Text style={styles.categoryName} numberOfLines={1}>
                 {getCategoryName({ id: item.category_id, name: item.category_name }) ||
                   (isIncome ? t('common_income') : t('common_expense'))}
               </Text>
             </>
           )}
-          <Text style={styles.dot}>•</Text>
+        </View>
+        <View style={styles.detailRow}>
           <Text style={styles.date}>{getRelativeDateLabel(item.date)}</Text>
         </View>
         {displayNotes ? (
@@ -163,8 +163,7 @@ export function TransactionItem({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: colors.surface,
@@ -180,10 +179,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
+    flexShrink: 0,
   },
   content: {
     flex: 1,
+    minWidth: 0,
     justifyContent: 'center',
   },
   title: {
@@ -194,17 +195,18 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
+    gap: 4,
+  },
+  detailRow: {
+    marginTop: 4,
   },
   categoryName: {
+    maxWidth: '100%',
     fontSize: 12,
     fontWeight: '500',
     color: colors.textSecondary,
-  },
-  dot: {
-    marginHorizontal: 4,
-    color: colors.textMuted,
-    fontSize: 10,
   },
   date: {
     fontSize: 12,
@@ -217,10 +219,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   rightSection: {
-    width: '100%',
     alignItems: 'flex-end',
     justifyContent: 'center',
     marginLeft: 8,
+    maxWidth: '45%',
   },
   amount: {
     fontSize: 15,
@@ -236,6 +238,7 @@ const styles = StyleSheet.create({
     color: '#6366F1',
   },
   walletBadge: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
@@ -244,6 +247,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   walletBadgeText: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -254,10 +258,6 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   actionIconBtn: {
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
     padding: 3,
   },
 });

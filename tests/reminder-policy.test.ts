@@ -19,6 +19,6 @@ it('uses separate persisted preferences and a single serialized scheduling owner
   assert.doesNotMatch(context, /scheduleDailyReminder\(|scheduleDebtReminder\(/);
   const settings = readFileSync('src/app/modal/settings.tsx', 'utf8');
   assert.doesNotMatch(settings, /ReminderEnabled\] = useState\(true\)/);
-  assert.match(settings, /reminderStatus\.daily/);
-  assert.match(settings, /reminderStatus\.debt/);
+  assert.doesNotMatch(settings, /reminderStatus\.daily/);
+  assert.doesNotMatch(settings, /reminderStatus\.debt/);
 });

@@ -193,10 +193,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   deleteBtn: {
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',    padding: 2,
+    padding: 2,
     marginLeft: 8,
   },
 });
