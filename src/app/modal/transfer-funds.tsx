@@ -361,8 +361,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   swapBtn: {
-    width: 48,
-    height: 48,
+    width: 38,
+    height: 38,
     borderRadius: 19,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,

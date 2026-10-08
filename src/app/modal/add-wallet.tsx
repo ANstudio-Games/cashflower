@@ -316,7 +316,7 @@ export default function AddWalletModal() {
           style={({ pressed }) => [
             styles.submitBtn,
             isSaving && { opacity: 0.65 },
-            { backgroundColor: colors.primaryDark },
+            { backgroundColor: color },
             pressed && styles.submitBtnPressed,
           ]}
           disabled={isSaving}
@@ -450,8 +450,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   iconBox: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -465,8 +465,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   colorCircle: {
-    width: 48,
-    height: 48,
+    width: 38,
+    height: 38,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',

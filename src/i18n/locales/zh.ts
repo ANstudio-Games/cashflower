@@ -1,6 +1,16 @@
 import { TranslationDictionary } from '../types';
 
 export const zh: TranslationDictionary = {
+  update_section: '应用更新',
+  update_check: '检查更新',
+  update_checking: '正在检查更新…',
+  update_downloading: '正在下载… {progress}%',
+  update_install: '下载 / 重试更新',
+  update_current: '已安装：{version}',
+  update_new: '可用版本：{version}',
+  update_latest: '当前已是最新发布版本。',
+  update_error: '更新失败。请检查网络后重试。发布版本必须可公开访问。',
+  update_permission: 'Android 会要求确认安装。如有提示，请允许 Cashflower 安装应用，然后再次点击重试。请勿卸载应用。',
   clarity_reset_filters: "重置搜索和筛选",
   clarity_debts_first: "尚未记录借款或应收款。添加第一笔借款以跟踪还款。",
   clarity_return: "本金收益率",
@@ -597,6 +607,7 @@ export const zh: TranslationDictionary = {
   report_total_income: '总收入',
   report_total_expense: '总支出',
   report_net_cashflow: '净现金流（盈余 / 赤字）',
+  report_current_wallet_balance: '导出时的钱包总余额',
   report_total_transactions: '交易总数',
   report_no: '序号',
   report_date: '日期',

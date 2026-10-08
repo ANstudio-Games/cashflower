@@ -1,6 +1,16 @@
 import { TranslationDictionary } from '../types';
 
 export const en: TranslationDictionary = {
+  update_section: 'App updates',
+  update_check: 'Check for updates',
+  update_checking: 'Checking for updates…',
+  update_downloading: 'Downloading… {progress}%',
+  update_install: 'Download / retry update',
+  update_current: 'Installed: {version}',
+  update_new: 'Available: {version}',
+  update_latest: 'You are using the latest released version.',
+  update_error: 'Update failed. Check your connection and try again. The release must be public.',
+  update_permission: 'Android will ask you to approve installation. If prompted, allow installs from Cashflower, then tap here again to retry. Do not uninstall the app.',
   clarity_reset_filters: "Reset search & filters",
   clarity_debts_first: "No debts or receivables recorded yet. Add your first loan to track payments.",
   clarity_return: "return on capital",
@@ -597,6 +607,7 @@ export const en: TranslationDictionary = {
   report_total_income: 'Total Income',
   report_total_expense: 'Total Expense',
   report_net_cashflow: 'Net Cash Flow (Surplus / Deficit)',
+  report_current_wallet_balance: 'Total Wallet Balance at Export',
   report_total_transactions: 'Total Transactions',
   report_no: 'No.',
   report_date: 'Date',

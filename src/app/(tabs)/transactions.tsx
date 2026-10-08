@@ -275,12 +275,14 @@ export default function TransactionsScreen() {
         data={filteredTransactions}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TransactionItem
-            item={item}
-            showWalletBadge={isMultiWalletEnabled}
-            onEdit={() => handleEdit(item.id)}
-            onDelete={(id) => deleteTransactionById(id)}
-          />
+          <View style={styles.transactionCard}>
+            <TransactionItem
+              item={item}
+              showWalletBadge={isMultiWalletEnabled}
+              onEdit={() => handleEdit(item.id)}
+              onDelete={(id) => deleteTransactionById(id)}
+            />
+          </View>
         )}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
@@ -292,12 +294,8 @@ export default function TransactionsScreen() {
                 ? t('tx_empty_desc_filtered')
                 : t('tx_empty_desc_empty')
             }
-            actionText={t(search || typeFilter !== 'all' || categoryFilter !== 'all' || walletFilter !== 'all' ? 'clarity_reset_filters' : 'tx_record_action')}
-            onActionPress={() => {
-              if (search || typeFilter !== 'all' || categoryFilter !== 'all' || walletFilter !== 'all') {
-                setSearch(''); setTypeFilter('all'); setCategoryFilter('all'); setWalletFilter('all');
-              } else router.push('/modal/add-transaction');
-            }}
+            actionText={t('tx_record_action')}
+            onActionPress={() => router.push('/modal/add-transaction')}
           />
         }
       />
@@ -334,8 +332,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   exportBtn: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
@@ -354,8 +352,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addBtn: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     backgroundColor: colors.primary,
     justifyContent: 'center',
@@ -477,10 +475,13 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 110,
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    gap: 8,
+  },
+  transactionCard: {
     backgroundColor: colors.surface,
-    marginHorizontal: 16,
-    marginTop: 6,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',

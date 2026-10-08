@@ -147,12 +147,12 @@ export default function DebtsScreen() {
             icon="people-outline"
             title={t('debt_empty_title')}
             description={
-              debts.length === 0 ? t('clarity_debts_first') : filter === 'unpaid'
+              filter === 'unpaid'
                 ? t('debt_empty_unpaid_desc')
                 : t('debt_empty_filter_desc')
             }
-            actionText={t(debts.length > 0 ? 'clarity_reset_filters' : 'debt_record_action')}
-            onActionPress={() => debts.length > 0 ? setFilter('all') : router.push('/modal/add-debt')}
+            actionText={t('debt_record_action')}
+            onActionPress={() => router.push('/modal/add-debt')}
           />
         }
       />
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addBtn: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     backgroundColor: colors.primary,
     justifyContent: 'center',

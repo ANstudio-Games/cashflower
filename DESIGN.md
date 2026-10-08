@@ -2,7 +2,7 @@
 name: Cashflower
 description: Buku Kas Modern — bersih, tenang, praktis; informasi keuangan lebih penting daripada dekorasi.
 colors:
-  primary: "#0F766E"
+  primary: "#0D9488"
   primaryLight: "#CCFBF1"
   primarySoft: "#F0FDFA"
   primaryDark: "#0F766E"
@@ -13,25 +13,25 @@ colors:
   borderLight: "#F8FAFC"
   text: "#0F172A"
   textSecondary: "#475569"
-  textMuted: "#64748B"
-  income: "#047857"
+  textMuted: "#94A3B8"
+  income: "#10B981"
   incomeSoft: "#ECFDF5"
   incomeDark: "#047857"
-  expense: "#B91C1C"
+  expense: "#EF4444"
   expenseSoft: "#FEF2F2"
   expenseDark: "#B91C1C"
-  warning: "#B45309"
+  warning: "#F59E0B"
   warningSoft: "#FFFBEB"
-  debt: "#B45309"
+  debt: "#F59E0B"
   debtSoft: "#FFFBEB"
   debtDark: "#B45309"
-  receivable: "#4338CA"
+  receivable: "#6366F1"
   receivableSoft: "#EEF2FF"
   receivableDark: "#4338CA"
-  investment: "#1D4ED8"
+  investment: "#3B82F6"
   investmentSoft: "#EFF6FF"
   investmentDark: "#1D4ED8"
-  info: "#1D4ED8"
+  info: "#3B82F6"
   infoSoft: "#EFF6FF"
 typography:
   balance:
@@ -196,7 +196,7 @@ Chip kategori memakai permukaan putih, border tipis, radius chip, padding 8/12, 
 
 ### Cards / Containers
 
-Kartu saldo adalah komponen khas: nominal utama, tombol catat, pemasukan, dan pengeluaran disusun vertikal agar nominal panjang dan font besar punya ruang. Ikon pemasukan/pengeluaran tetap berada dalam permukaan soft. Kartu memakai surface, radius balance-card, border tipis, padding card, dan shadow md. Kartu nominal form memakai radius amount-card dan padding 18.
+Kartu saldo kembali ke susunan versi 1.6.0: saldo dan tombol catat berada dalam satu baris; pemasukan dan pengeluaran berdampingan di bawah. Ikon pemasukan/pengeluaran tetap berada dalam permukaan soft. Kartu memakai surface, radius balance-card, border tipis, padding card, dan shadow md. Kartu nominal form memakai radius amount-card dan padding 18.
 
 ### Inputs / Fields
 
@@ -219,3 +219,5 @@ Lima tab: Beranda, Transaksi, Grafik, Hutang, dan Investasi. Tab aktif memakai p
 - **Don't** menukar warna profit/loss atau hutang/piutang demi variasi visual.
 - **Don't** menambah bayangan tebal pada setiap permukaan.
 - **Don't** menganggap tema gelap, adaptasi tablet, state focus, atau aksesibilitas menyeluruh sudah terverifikasi hanya berdasarkan dokumen ini.
+
+<!-- Visual rollback requested: theme and existing StyleSheet blocks restored from 5358742 (1.6.0). Functional savings summaries/loading/errors remain. Legacy muted/accent contrast and small touch targets are not claimed WCAG compliant. -->

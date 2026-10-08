@@ -74,7 +74,8 @@ export function WalletCard({ wallet, onPress, compact = false }: WalletCardProps
           {getWalletName(wallet)}
         </Text>
         <Text
-          style={[styles.walletBalance, isNegative && styles.negativeBalance]}>
+          style={[styles.walletBalance, isNegative && styles.negativeBalance]}
+          numberOfLines={1}>
           {formatCurrency(balance, language)}
         </Text>
       </View>

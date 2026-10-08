@@ -305,8 +305,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   colorCircle: {
-    width: 48,
-    height: 48,
+    width: 38,
+    height: 38,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',

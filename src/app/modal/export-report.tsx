@@ -37,7 +37,7 @@ export default function ExportReportModal() {
     formatMonthYear,
   } = useI18n();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
-  const { transactions } = useFinance();
+  const { transactions, wallets } = useFinance();
 
   const [period, setPeriod] = useState<PeriodPreset>('this_month');
   const [format, setFormat] = useState<ExportFormat>('pdf');
@@ -161,6 +161,7 @@ export default function ExportReportModal() {
         periodLabel,
         startDate,
         endDate,
+        currentWalletBalance: wallets.reduce((sum, wallet) => sum + (wallet.balance ?? 0), 0),
       };
 
       if (format === 'pdf') {

@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Transaction } from '@/types';
 import { formatCurrency } from '@/utils/format-currency';
+import { getReportSummary } from '@/utils/report-summary';
 import {
   formatDateShortForLanguage,
   formatDateTimeForLanguage,
@@ -32,20 +33,15 @@ function escapeCsv(value: string | number | null | undefined): string {
 
 export async function exportTransactionsToCsv(
   transactions: Transaction[],
-  meta: ReportMetadata
+  meta: ReportMetadata & { currentWalletBalance: number }
 ): Promise<string> {
   const language = meta.language;
   const t = (key: string, params?: Record<string, string | number>) =>
     translate(language, key, params);
   const businessName = meta.businessName?.trim() || 'Cashflower';
   const reporterName = meta.reporterName?.trim() || t('export_default_reporter_name');
-  const totalIncome = transactions
-    .filter((transaction) => transaction.type === 'income')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-  const totalExpense = transactions
-    .filter((transaction) => transaction.type === 'expense')
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-  const netBalance = totalIncome - totalExpense;
+  const summary = getReportSummary(transactions, meta.currentWalletBalance);
+  const { totalIncome, totalExpense, netCashflow: netBalance } = summary;
   const lines: string[] = [];
 
   lines.push(escapeCsv(t('report_title')));
@@ -55,6 +51,7 @@ export async function exportTransactionsToCsv(
   lines.push(`${escapeCsv(t('report_exported_at'))},${escapeCsv(formatDateTimeForLanguage(new Date(), language))}`);
   lines.push('');
   lines.push(escapeCsv(t('report_cash_summary')));
+  lines.push(`${escapeCsv(t('report_current_wallet_balance'))},${escapeCsv(formatCurrency(summary.currentWalletBalance, language))}`);
   lines.push(`${escapeCsv(t('report_total_income'))},${escapeCsv(formatCurrency(totalIncome, language))}`);
   lines.push(`${escapeCsv(t('report_total_expense'))},${escapeCsv(formatCurrency(totalExpense, language))}`);
   lines.push(`${escapeCsv(t('report_net_cashflow'))},${escapeCsv(formatCurrency(netBalance, language))}`);

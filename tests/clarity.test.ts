@@ -9,8 +9,7 @@ it('shows actual deficit and distinguishes unavailable rates', () => {
   assert.equal(savingsRate(0, 100), null);
   assert.equal(savingsRate(NaN, 100), null);
 });
-it('category detail no longer silently hides categories beyond six', () => {
+it('category detail retains top 6 categories like 1.6.0', () => {
   const source = readFileSync('src/components/category-donut-chart.tsx', 'utf8');
-  assert.match(source, /safeData\.map/);
-  assert.doesNotMatch(source, /safeData\.slice\(0, 6\)/);
+  assert.match(source, /safeData\.slice\(0, 6\)/);
 });

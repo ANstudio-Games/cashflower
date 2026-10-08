@@ -369,8 +369,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   actionBtn: {
-    minHeight: 48,
-    justifyContent: 'center',    paddingHorizontal: 10,
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
   },
@@ -385,9 +384,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   deleteBtn: {
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',    padding: 4,
+    padding: 4,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   StatusBar,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,8 @@ import { useFinance } from '@/context/finance-context';
 import { useI18n, LANGUAGES, Language } from '@/i18n';
 import { colors } from '@/theme/colors';
 import { useSaveAction } from '@/utils/use-save-action';
+import { AppRelease, RELEASES_URL } from '@/utils/app-release';
+import { checkAppUpdate, downloadAndInstallUpdate, installedVersion } from '@/services/app-update';
 
 export default function SettingsModal() {
   const router = useRouter();
@@ -42,6 +45,34 @@ export default function SettingsModal() {
   const { isSaving: changingReminder, runSave: changeReminder } = useSaveAction();
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const updateBusy = useRef(false);
+  const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'available' | 'latest' | 'downloading' | 'installer' | 'error'>('idle');
+  const [release, setRelease] = useState<AppRelease | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
+  const handleUpdate = async () => {
+    if (updateBusy.current) return;
+    updateBusy.current = true;
+    try {
+      if (Platform.OS !== 'android') {
+        await Linking.openURL(RELEASES_URL);
+        return;
+      }
+      if (release) {
+        setUpdateState('downloading');
+        setDownloadProgress(0);
+        await downloadAndInstallUpdate(release, setDownloadProgress);
+        setUpdateState('installer');
+      } else {
+        setUpdateState('checking');
+        const next = await checkAppUpdate();
+        setRelease(next);
+        setUpdateState(next ? 'available' : 'latest');
+      }
+    } catch {
+      setUpdateState('error');
+    } finally { updateBusy.current = false; }
+  };
 
   const handleBackup = async () => {
     try {
@@ -112,6 +143,28 @@ export default function SettingsModal() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.sectionHeader}>{t('update_section')}</Text>
+        <View style={styles.cardGroup}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={updateState === 'checking' || updateState === 'downloading'}
+            onPress={handleUpdate}
+            style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.8 }]}>
+            <Ionicons name="cloud-download-outline" size={22} color={colors.primary} />
+            <View style={styles.actionInfo}>
+              <Text style={styles.actionTitle}>
+                {t(updateState === 'checking' ? 'update_checking' : updateState === 'downloading' ? 'update_downloading' : release ? 'update_install' : 'update_check', { progress: downloadProgress })}
+              </Text>
+              <Text style={styles.actionDesc}>
+                {t('update_current', { version: installedVersion })}
+                {release ? ` · ${t('update_new', { version: release.version })}` : ''}
+              </Text>
+              {updateState === 'latest' && <Text style={styles.actionDesc}>{t('update_latest')}</Text>}
+              {updateState === 'error' && <Text style={styles.actionDesc}>{t('update_error')}</Text>}
+              {(release || updateState === 'installer') && <Text style={styles.actionDesc}>{t('update_permission')}</Text>}
+            </View>
+          </Pressable>
+        </View>
         {/* Section: Language Selection */}
         <Text style={styles.sectionHeader}>{t('settings_language_section')}</Text>
         <View style={styles.cardGroup}>
@@ -246,7 +299,6 @@ export default function SettingsModal() {
             <View style={styles.actionInfo}>
               <Text style={styles.actionTitle}>{t('settings_reminder_daily_title')}</Text>
               <Text style={styles.actionDesc}>{t('settings_reminder_daily_desc')}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`reminder_status_${reminderStatus.daily}`)}</Text>
             </View>
             <Switch
               value={dailyReminderEnabled}
@@ -266,7 +318,6 @@ export default function SettingsModal() {
             <View style={styles.actionInfo}>
               <Text style={styles.actionTitle}>{t('settings_reminder_debt_title')}</Text>
               <Text style={styles.actionDesc}>{t('settings_reminder_debt_desc')}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`reminder_status_${reminderStatus.debt}`)}</Text>
             </View>
             <Switch
               value={debtReminderEnabled}
