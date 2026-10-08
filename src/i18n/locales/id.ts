@@ -132,6 +132,14 @@ export const id: TranslationDictionary = {
   tx_record_action: 'Catat Transaksi',
   tx_delete_confirm_title: 'Hapus Transaksi',
   tx_delete_confirm_msg: 'Yakin ingin menghapus catatan "{title}"?',
+  tx_filter_date_title: 'Filter Tanggal',
+  tx_filter_year: 'Tahun',
+  tx_filter_month: 'Bulan',
+  tx_filter_exact_date: 'Tanggal spesifik',
+  tx_filter_exact_date_placeholder: 'YYYY-MM-DD, cth. 2026-02-14',
+  tx_filter_reset: 'Reset filter',
+  tx_filter_all_time: 'Semua waktu',
+  tx_filter_this_month: 'Bulan ini',
 
   // Add / Edit Transaction Modal
   tx_modal_add_title: 'Catat Transaksi',
