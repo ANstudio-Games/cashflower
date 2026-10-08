@@ -22,6 +22,11 @@ test('CI signs release builds with secrets without changing debug signing', () =
   }
 });
 
+test('Android setup does not request the obsolete tools package', () => {
+  const workflow = readFileSync('.github/workflows/android-release.yml', 'utf8');
+  assert.match(workflow, /uses: android-actions\/setup-android@v3\s+with:[\s\S]*?packages: platform-tools/);
+});
+
 test('signing key path is initialized at step runtime before restoring the key', () => {
   const workflow = readFileSync('.github/workflows/android-release.yml', 'utf8');
   assert.doesNotMatch(workflow, /ANDROID_KEYSTORE_PATH:.*runner\.temp/);
