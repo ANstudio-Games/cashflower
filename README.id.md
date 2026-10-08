@@ -2,113 +2,53 @@
 
 [English](README.md) · Bahasa Indonesia · [简体中文](README.zh-CN.md)
 
-Cashflower adalah aplikasi pencatatan keuangan pribadi untuk Android, dibangun dengan Expo dan React Native. Catatan keuangan disimpan di database SQLite lokal. Aplikasi ini menyediakan pencatatan arus kas, utang-piutang, anggaran, rencana pembelian, dan jurnal investasi.
+Cashflower adalah aplikasi pencatatan keuangan milik **ANstudio**. Gunakan untuk mencatat pemasukan dan pengeluaran, mengelola dompet, memantau utang-piutang, serta mengatur anggaran dan rencana pembelian.
 
-## Fitur
+## Cara menggunakan
 
-- Mencatat pemasukan dan pengeluaran beserta kategori, tanggal, dan catatan.
-- Mencari transaksi dan memfilter berdasarkan jenis, kategori, atau dompet.
-- Memisahkan saldo tunai, rekening bank, dan e-wallet. Transfer antar dompet tidak dihitung sebagai pemasukan atau pengeluaran.
-- Mengatur batas pengeluaran bulanan, termasuk batas per kategori.
-- Mencatat utang, piutang, jatuh tempo, dan pembayaran.
-- Mengalokasikan dana ke rencana pembelian dan mencatat pengeluaran saat pembelian selesai.
-- Mencatat transaksi investasi dengan ringkasan laba, rugi, dan win rate.
-- Melihat grafik arus kas dan rincian pengeluaran.
-- Mengekspor laporan PDF atau CSV, serta mencadangkan dan memulihkan catatan melalui file JSON.
-- Mengaktifkan pengingat lokal untuk pencatatan harian dan pembayaran utang yang mendekati jatuh tempo.
+### Mencatat pemasukan dan pengeluaran
 
-Antarmuka tersedia dalam bahasa Indonesia, Inggris, dan Mandarin.
+Ketuk **+**, pilih pemasukan atau pengeluaran, lalu isi nominal, judul, kategori, dan tanggal. Tambahkan catatan jika diperlukan, kemudian simpan. Gunakan tab **Transaksi** untuk mencari, memfilter, mengedit, atau menghapus catatan.
 
-## Data dan koneksi internet
+### Mengelola dompet
 
-Catatan keuangan disimpan di perangkat. Simpan cadangan di luar aplikasi sebelum mengganti ponsel atau menghapus aplikasi. Data dari perangkat yang hilang tidak dapat dipulihkan melalui repositori ini.
+Buka pengelolaan dompet melalui **Beranda** atau **Pengaturan** untuk menambahkan uang tunai, rekening bank, atau e-wallet. Pilih dompet saat mencatat transaksi. Gunakan transfer untuk memindahkan dana antar dompet tanpa menghitungnya sebagai pemasukan atau pengeluaran.
 
-Pencatatan keuangan utama dapat digunakan tanpa internet. Namun, aplikasi menyertakan Google Mobile Ads, sehingga tidak semua bagian aplikasi bebas dari akses jaringan. Membagikan laporan atau cadangan melalui layanan lain juga mungkin memerlukan internet.
+### Mencatat utang dan piutang
 
-## Menjalankan proyek
+Buka **Hutang** untuk mencatat uang yang Anda pinjam atau pinjamkan. Isi nama orang, nominal, dan tanggal jatuh tempo, lalu catat pembayaran saat dilakukan.
 
-Pasang Node.js versi LTS terkini dan npm. Untuk build Android lokal, Anda juga memerlukan Android Studio, Android SDK, dan JDK yang sudah dikonfigurasi.
+### Mengatur anggaran dan rencana pembelian
 
-Jalankan dari direktori proyek:
+Atur batas pengeluaran bulanan melalui pengaturan anggaran. Untuk pembelian yang direncanakan, buat rencana pembelian, alokasikan dana, lalu catat pembelian saat selesai.
+
+### Melihat ringkasan
+
+Gunakan **Grafik** untuk melihat pemasukan, pengeluaran, dan rincian kategori. Tab **Investasi** digunakan untuk mencatat transaksi investasi dan melihat laba-rugi, bukan untuk melakukan perdagangan aset.
+
+### Mengekspor dan mencadangkan data
+
+Ekspor laporan dalam format PDF atau CSV. Melalui **Pengaturan**, buat cadangan JSON dan simpan di luar aplikasi. Untuk memindahkan catatan ke perangkat lain, pulihkan file cadangan di perangkat tersebut.
+
+Catatan keuangan disimpan secara lokal. Buat cadangan sebelum menghapus data aplikasi atau browser, menghapus aplikasi, atau mengganti perangkat. Pencatatan utama dapat digunakan tanpa internet, tetapi iklan dan layanan berbagi eksternal mungkin menggunakan koneksi internet.
+
+Bahasa antarmuka dapat diubah melalui **Pengaturan**. Tersedia bahasa Indonesia, Inggris, dan Mandarin.
+
+## Mencoba di browser
+
+Pasang [Node.js versi LTS terkini](https://nodejs.org/), unduh proyek ini, lalu buka terminal di folder proyek. Di Windows, Anda dapat menggunakan PowerShell.
 
 ```sh
 npm install
-npx expo run:android
-```
-
-Nyalakan emulator Android terlebih dahulu, atau hubungkan ponsel Android dengan USB debugging aktif. Perintah ini membangun dan memasang aplikasi native, lalu menjalankan server pengembangan. Perintah yang sama dapat digunakan di PowerShell pada Windows.
-
-Untuk sesi berikutnya, jalankan Metro:
-
-```sh
-npx expo start
-```
-
-Buka aplikasi pengembangan yang sudah terpasang di perangkat. Jika dependensi native atau config plugin berubah, jalankan kembali `npx expo run:android` untuk membangun ulang aplikasi.
-
-### Expo Go dan web
-
-Expo Go tidak dapat menggantikan build native proyek ini. Dependensi `react-native-google-mobile-ads` tidak tersedia di Expo Go.
-
-Untuk mencoba target web:
-
-```sh
 npm run web
 ```
 
-Target web bukan pengganti pengujian Android. Integrasi native seperti iklan, notifikasi, berbagi file, dan pencetakan dapat berperilaku berbeda atau tidak tersedia di browser.
+Buka alamat lokal yang muncul di terminal. Biarkan terminal tetap berjalan selama menggunakan aplikasi. Tekan **Ctrl+C** untuk menghentikannya.
 
-## Pemeriksaan kode
+Perintah ini menjalankan versi web di komputer Anda. Beberapa fitur, termasuk notifikasi, iklan, berbagi file, dan pencetakan, mungkin berbeda dari Android atau tidak tersedia di browser. Gunakan data contoh saat pertama kali mencoba.
 
-```sh
-# TypeScript
-npx tsc --noEmit
+## Kepemilikan dan lisensi
 
-# Unit test (memerlukan Bun)
-bun test tests
+Cashflower dimiliki oleh **ANstudio**. Seluruh hak dilindungi.
 
-# Lint
-npm run lint
-```
-
-Pengujian mencakup input nominal, pengaman penyimpanan, alokasi dana rencana, kebijakan pengingat, frekuensi iklan, dan beberapa pemeriksaan UI. Pengujian ini tidak menggantikan pengujian langsung di perangkat.
-
-## Build Android
-
-Profil build tersedia di `eas.json`. EAS Build memerlukan akun Expo dan dapat dikenai batas penggunaan atau biaya layanan.
-
-```sh
-npx eas-cli login
-
-# APK untuk pengujian internal
-npx eas-cli build --platform android --profile preview
-
-# Android App Bundle untuk distribusi melalui toko aplikasi
-npx eas-cli build --platform android --profile production
-```
-
-Profil `development` juga tersedia untuk build development client. Periksa application ID, kredensial penandatanganan, dan konfigurasi iklan sebelum mendistribusikan build.
-
-## Struktur kode
-
-```text
-src/
-  app/          Layar, tab, dan rute modal Expo Router
-  components/   Komponen UI dan grafik
-  config/       Konfigurasi aplikasi, termasuk iklan
-  context/      State aplikasi bersama
-  db/           Skema SQLite dan operasi database
-  i18n/         Terjemahan dan utilitas bahasa
-  services/     Layanan aplikasi
-  theme/        Warna dan gaya visual bersama
-  types/        Model TypeScript
-  utils/        Format data, laporan, cadangan, dan pengingat
-tests/          Unit test
-assets/         Ikon dan gambar
-```
-
-`app.json` memuat versi dan konfigurasi Expo. `package.json` berisi dependensi dan perintah lokal. `DESIGN.md` mendokumentasikan aturan visual aplikasi.
-
-## Lisensi
-
-Repositori ini bersifat privat dan proprietary. `package.json` mencantumkan `UNLICENSED`; proyek ini tidak memberikan lisensi open source. Distribusi ulang kode sumber atau aset memerlukan izin pemilik.
+Proyek ini merupakan perangkat lunak proprietary, bukan open source. Petunjuk di atas menjelaskan cara menggunakan dan mencoba aplikasi; petunjuk tersebut tidak memberikan izin untuk menyalin, memodifikasi, mendistribusikan ulang, memublikasikan, atau menjual perangkat lunak maupun asetnya. Ketentuan lengkap tersedia dalam [LICENSE](LICENSE).

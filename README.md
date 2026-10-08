@@ -2,113 +2,53 @@
 
 English · [Bahasa Indonesia](README.id.md) · [简体中文](README.zh-CN.md)
 
-Cashflower is a personal finance app for Android, built with Expo and React Native. It keeps your financial records in a local SQLite database, with tools for tracking cash flow, debts, budgets, savings plans, and investment trades.
+Cashflower is a finance-tracking app by **ANstudio**. Use it to record income and expenses, manage wallets, track debts, and set spending budgets and purchase plans.
 
-## What it does
+## Using the app
 
-- Record income and expenses with categories, dates, and notes.
-- Search transactions and filter them by type, category, or wallet.
-- Track cash, bank accounts, and e-wallets separately. Transfers move funds between wallets without counting as income or expenses.
-- Set monthly spending limits, including limits for individual categories.
-- Record debts and receivables, due dates, and repayments.
-- Allocate funds to purchase plans and record a purchase when a plan is completed.
-- Keep an investment journal with profit, loss, and win-rate summaries.
-- View cash-flow charts and expense breakdowns.
-- Export PDF or CSV reports, and back up or restore records using JSON files.
-- Enable local reminders for daily entries and upcoming debt payments.
+### Record income and expenses
 
-The interface supports Indonesian, English, and Chinese.
+Tap **+**, choose income or expense, and enter the amount, title, category, and date. Add a note if needed, then save. Use the **Transactions** tab to search, filter, edit, or delete entries.
 
-## Data and connectivity
+### Manage wallets
 
-Financial records are stored on the device. Keep a backup outside the app before changing phones or uninstalling it; a lost device cannot be recovered from this repository.
+Open wallet management from **Home** or **Settings** to add cash, bank, or e-wallet accounts. Select a wallet when recording a transaction. Use a transfer to move funds between wallets without counting it as income or an expense.
 
-Core bookkeeping works offline. The app also includes Google Mobile Ads, so “offline” does not mean that every part of the app avoids network access. Sharing a report or backup through another service may also require an internet connection.
+### Track debts and receivables
 
-## Run locally
+Open **Debts** to record money you owe or money owed to you. Enter the person, amount, and due date, then record repayments as they happen.
 
-Install a current Node.js LTS release and npm. For a local Android build, you also need Android Studio, the Android SDK, and a configured JDK.
+### Set budgets and purchase plans
 
-From the project directory:
+Set monthly spending limits in the budget settings. For a planned purchase, create a purchase plan, allocate funds to it, and record the purchase when it is completed.
+
+### Review your records
+
+Use **Analytics** to view income, expenses, and category breakdowns. The **Investments** tab is a journal for recording trades and reviewing profit and loss; it does not place trades for you.
+
+### Export and back up
+
+Export reports as PDF or CSV. In **Settings**, create a JSON backup and keep it outside the app. To move your records to another device, restore that backup there.
+
+Financial records are stored locally. Back up before clearing app or browser data, uninstalling, or changing devices. Core bookkeeping works offline, but ads and external sharing services may use the internet.
+
+You can change the interface language in **Settings**. Indonesian, English, and Chinese are available.
+
+## Try it in a browser
+
+Install a current [Node.js LTS release](https://nodejs.org/), download this project, and open a terminal in its folder. On Windows, PowerShell works too.
 
 ```sh
 npm install
-npx expo run:android
-```
-
-Start an Android emulator first, or connect an Android phone with USB debugging enabled. The command builds and installs the native app, then starts the development server. These commands also work from PowerShell on Windows.
-
-For subsequent sessions, start Metro with:
-
-```sh
-npx expo start
-```
-
-Open the installed development app on your device. If you change native dependencies or config plugins, run `npx expo run:android` again to rebuild it.
-
-### Expo Go and web
-
-Expo Go is not a replacement for the native build: this project includes `react-native-google-mobile-ads`, which is not bundled with Expo Go.
-
-To try the web target:
-
-```sh
 npm run web
 ```
 
-Treat it as a separate target, not an Android test. Native integrations such as ads, notifications, file sharing, and printing may behave differently or be unavailable in the browser.
+Open the local URL shown in the terminal. Keep the terminal running while using the app; press **Ctrl+C** to stop it.
 
-## Checks
+This runs the web version on your computer. Some features, including notifications, ads, file sharing, and printing, may differ from Android or be unavailable in your browser. Use sample records when trying it for the first time.
 
-```sh
-# TypeScript
-npx tsc --noEmit
+## Ownership and license
 
-# Unit tests (requires Bun)
-bun test tests
+Cashflower is owned by **ANstudio**. All rights reserved.
 
-# Lint
-npm run lint
-```
-
-Tests cover currency input, save guards, plan allocations, reminder policy, ad frequency, and selected UI checks. They do not replace testing the app on a device.
-
-## Android builds
-
-The build profiles are defined in `eas.json`. EAS Build requires an Expo account and may be subject to service limits or charges.
-
-```sh
-npx eas-cli login
-
-# Installable APK for internal testing
-npx eas-cli build --platform android --profile preview
-
-# Android App Bundle for store distribution
-npx eas-cli build --platform android --profile production
-```
-
-The `development` profile is also available for custom development-client builds. Check the application ID, signing credentials, and ad configuration before distributing a build.
-
-## Code layout
-
-```text
-src/
-  app/          Expo Router screens, tabs, and modal routes
-  components/   Shared UI and charts
-  config/       App configuration, including ads
-  context/      Shared application state
-  db/           SQLite schema and database operations
-  i18n/         Translations and locale helpers
-  services/     Application services
-  theme/        Colors and shared visual styles
-  types/        TypeScript models
-  utils/        Formatting, reports, backups, and reminders
-tests/          Unit tests
-assets/         Icons and images
-```
-
-`app.json` holds the app version and Expo configuration. `package.json` lists dependencies and local commands. `DESIGN.md` documents the visual conventions.
-
-## License
-
-This repository is private and proprietary. `package.json` declares it `UNLICENSED`; no open-source license is granted. Permission from the owner is required to redistribute the source code or assets.
+This is proprietary software, not an open-source project. The instructions above explain how to use and try the app; they do not grant permission to copy, modify, redistribute, publish, or sell the software or its assets. See [LICENSE](LICENSE) for the terms.
