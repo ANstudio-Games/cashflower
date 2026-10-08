@@ -26,12 +26,89 @@ export default function TransactionsScreen() {
     getWalletName,
     getTransactionTitle,
     getTransactionNotes,
+    getMonthNames,
   } = useI18n();
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [walletFilter, setWalletFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<number | 'all'>('all');
+  const [monthFilter, setMonthFilter] = useState<number | 'all'>('all');
+  const [exactDate, setExactDate] = useState('');
+  const [showDateFilter, setShowDateFilter] = useState(false);
+
+  const monthNames = getMonthNames();
+
+  // Tahun yang tersedia dari data transaksi + tahun berjalan
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    const nowYear = new Date().getFullYear();
+    years.add(nowYear);
+    for (const tx of transactions) {
+      if (tx?.date && /^\d{4}-\d{2}-\d{2}/.test(tx.date)) {
+        const y = parseInt(tx.date.slice(0, 4), 10);
+        if (!isNaN(y)) years.add(y);
+      }
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [transactions]);
+
+  // Kategori yang ditampilkan mengikuti tipe: expense -> kategori expense saja, dst.
+  const visibleCategories = useMemo(() => {
+    if (typeFilter === 'expense' || typeFilter === 'income') {
+      return categories.filter((c) => c.type === typeFilter);
+    }
+    return categories;
+  }, [categories, typeFilter]);
+
+  const handleTypeChange = (next: 'all' | 'expense' | 'income' | 'transfer') => {
+    setTypeFilter(next);
+    // Reset kategori kalau kategori terpilih tidak cocok dengan tipe baru
+    if (next === 'expense' || next === 'income') {
+      const stillVisible = categories.some((c) => c.id === categoryFilter && c.type === next);
+      if (categoryFilter !== 'all' && !stillVisible) setCategoryFilter('all');
+    }
+  };
+
+  const isExactDateValid = /^\d{4}-\d{2}-\d{2}$/.test(exactDate.trim());
+
+  const hasActiveDateFilter =
+    yearFilter !== 'all' || monthFilter !== 'all' || isExactDateValid;
+
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    typeFilter !== 'all' ||
+    categoryFilter !== 'all' ||
+    walletFilter !== 'all' ||
+    hasActiveDateFilter;
+
+  const dateFilterSummary = useMemo(() => {
+    if (isExactDateValid) return exactDate.trim();
+    if (yearFilter !== 'all' && monthFilter !== 'all') {
+      return `${monthNames[(monthFilter as number) - 1]} ${yearFilter}`;
+    }
+    if (yearFilter !== 'all') return String(yearFilter);
+    if (monthFilter !== 'all') return `${monthNames[(monthFilter as number) - 1]}`;
+    return t('tx_filter_all_time');
+  }, [isExactDateValid, exactDate, yearFilter, monthFilter, monthNames, t]);
+
+  const resetAllFilters = () => {
+    setSearch('');
+    setTypeFilter('all');
+    setCategoryFilter('all');
+    setWalletFilter('all');
+    setYearFilter('all');
+    setMonthFilter('all');
+    setExactDate('');
+  };
+
+  const applyThisMonth = () => {
+    const now = new Date();
+    setYearFilter(now.getFullYear());
+    setMonthFilter(now.getMonth() + 1);
+    setExactDate('');
+  };
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
@@ -56,6 +133,19 @@ export default function TransactionsScreen() {
         const matchDest = tx?.destination_wallet_id === walletFilter;
         if (!matchSource && !matchDest) return false;
       }
+      // Year filter (YYYY-MM-DD)
+      if (yearFilter !== 'all') {
+        if (!tx?.date || tx.date.slice(0, 4) !== String(yearFilter)) return false;
+      }
+      // Month filter (1-12)
+      if (monthFilter !== 'all') {
+        const mm = tx?.date?.slice(5, 7);
+        if (mm !== String(monthFilter).padStart(2, '0')) return false;
+      }
+      // Exact date filter (YYYY-MM-DD)
+      if (isExactDateValid) {
+        if (tx?.date !== exactDate.trim()) return false;
+      }
       return true;
     });
   }, [
@@ -64,6 +154,10 @@ export default function TransactionsScreen() {
     typeFilter,
     categoryFilter,
     walletFilter,
+    yearFilter,
+    monthFilter,
+    exactDate,
+    isExactDateValid,
     isMultiWalletEnabled,
     getTransactionTitle,
     getTransactionNotes,
@@ -126,7 +220,7 @@ export default function TransactionsScreen() {
       <View style={styles.filterRow}>
         <Pressable
           style={[styles.typeTab, typeFilter === 'all' && styles.typeTabActive]}
-          onPress={() => setTypeFilter('all')}>
+          onPress={() => handleTypeChange('all')}>
           <Text
             style={[styles.typeTabText, typeFilter === 'all' && styles.typeTabTextActive]}
             numberOfLines={1}>
@@ -135,7 +229,7 @@ export default function TransactionsScreen() {
         </Pressable>
         <Pressable
           style={[styles.typeTab, typeFilter === 'expense' && styles.typeTabActiveExpense]}
-          onPress={() => setTypeFilter('expense')}>
+          onPress={() => handleTypeChange('expense')}>
           <Ionicons
             name="arrow-up"
             size={13}
@@ -149,7 +243,7 @@ export default function TransactionsScreen() {
         </Pressable>
         <Pressable
           style={[styles.typeTab, typeFilter === 'income' && styles.typeTabActiveIncome]}
-          onPress={() => setTypeFilter('income')}>
+          onPress={() => handleTypeChange('income')}>
           <Ionicons
             name="arrow-down"
             size={13}
@@ -164,7 +258,7 @@ export default function TransactionsScreen() {
         {isMultiWalletEnabled && (
           <Pressable
             style={[styles.typeTab, typeFilter === 'transfer' && styles.typeTabActiveTransfer]}
-            onPress={() => setTypeFilter('transfer')}>
+            onPress={() => handleTypeChange('transfer')}>
             <Ionicons
               name="swap-horizontal"
               size={13}
@@ -178,6 +272,145 @@ export default function TransactionsScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* Date Filter Toggle */}
+      <View style={styles.dateFilterWrap}>
+        <Pressable
+          style={[styles.dateToggle, hasActiveDateFilter && styles.dateToggleActive]}
+          onPress={() => setShowDateFilter((v) => !v)}>
+          <Ionicons
+            name="calendar-outline"
+            size={15}
+            color={hasActiveDateFilter ? colors.primaryDark : colors.textSecondary}
+          />
+          <Text
+            style={[styles.dateToggleText, hasActiveDateFilter && styles.dateToggleTextActive]}
+            numberOfLines={1}>
+            {t('tx_filter_date_title')}: {dateFilterSummary}
+          </Text>
+          {hasActiveDateFilter && (
+            <Pressable
+              hitSlop={8}
+              onPress={() => {
+                setYearFilter('all');
+                setMonthFilter('all');
+                setExactDate('');
+              }}>
+              <Ionicons name="close-circle" size={16} color={colors.primaryDark} />
+            </Pressable>
+          )}
+          <Ionicons
+            name={showDateFilter ? 'chevron-up' : 'chevron-down'}
+            size={15}
+            color={colors.textSecondary}
+          />
+        </Pressable>
+
+        {hasActiveFilters && (
+          <Pressable style={styles.resetBtn} onPress={resetAllFilters} hitSlop={8}>
+            <Ionicons name="refresh-outline" size={13} color={colors.primaryDark} />
+            <Text style={styles.resetBtnText}>{t('tx_filter_reset')}</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {showDateFilter && (
+        <View style={styles.datePanel}>
+          <View style={styles.dateQuickRow}>
+            <Pressable
+              style={[styles.catChip, !hasActiveDateFilter && styles.catChipActive]}
+              onPress={() => {
+                setYearFilter('all');
+                setMonthFilter('all');
+                setExactDate('');
+              }}>
+              <Text
+                style={[styles.catChipText, !hasActiveDateFilter && styles.catChipTextActive]}>
+                {t('tx_filter_all_time')}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.catChip} onPress={applyThisMonth}>
+              <Text style={styles.catChipText}>{t('tx_filter_this_month')}</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.dateLabel}>{t('tx_filter_year')}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dateChipScroll}>
+            <Pressable
+              style={[styles.catChip, yearFilter === 'all' && styles.catChipActive]}
+              onPress={() => setYearFilter('all')}>
+              <Text
+                style={[styles.catChipText, yearFilter === 'all' && styles.catChipTextActive]}>
+                {t('common_all')}
+              </Text>
+            </Pressable>
+            {availableYears.map((y) => (
+              <Pressable
+                key={y}
+                style={[styles.catChip, yearFilter === y && styles.catChipActive]}
+                onPress={() => setYearFilter(yearFilter === y ? 'all' : y)}>
+                <Text
+                  style={[styles.catChipText, yearFilter === y && styles.catChipTextActive]}>
+                  {y}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.dateLabel}>{t('tx_filter_month')}</Text>
+          <View style={styles.monthGrid}>
+            <Pressable
+              style={[
+                styles.monthChip,
+                monthFilter === 'all' && styles.catChipActive,
+              ]}
+              onPress={() => setMonthFilter('all')}>
+              <Text
+                style={[
+                  styles.catChipText,
+                  monthFilter === 'all' && styles.catChipTextActive,
+                ]}>
+                {t('common_all')}
+              </Text>
+            </Pressable>
+            {monthNames.map((m, idx) => {
+              const monthNum = idx + 1;
+              const isSelected = monthFilter === monthNum;
+              return (
+                <Pressable
+                  key={m + idx}
+                  style={[styles.monthChip, isSelected && styles.catChipActive]}
+                  onPress={() => setMonthFilter(isSelected ? 'all' : monthNum)}>
+                  <Text
+                    style={[styles.catChipText, isSelected && styles.catChipTextActive]}>
+                    {m}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.dateLabel}>{t('tx_filter_exact_date')}</Text>
+          <View style={styles.exactDateRow}>
+            <TextInput
+              style={styles.exactDateInput}
+              placeholder={t('tx_filter_exact_date_placeholder')}
+              placeholderTextColor={colors.textMuted}
+              value={exactDate}
+              onChangeText={setExactDate}
+              autoCapitalize="none"
+            />
+            {exactDate.length > 0 && (
+              <Pressable onPress={() => setExactDate('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Horizontal Wallet Filter Chips */}
       {isMultiWalletEnabled && (
@@ -242,7 +475,7 @@ export default function TransactionsScreen() {
             </Text>
           </Pressable>
 
-          {categories.map((cat) => {
+          {visibleCategories.map((cat) => {
             const isSelected = categoryFilter === cat.id;
             return (
               <Pressable
@@ -290,7 +523,7 @@ export default function TransactionsScreen() {
             icon="receipt-outline"
             title={t('tx_empty_title')}
             description={
-              search || typeFilter !== 'all' || categoryFilter !== 'all' || walletFilter !== 'all'
+              hasActiveFilters
                 ? t('tx_empty_desc_filtered')
                 : t('tx_empty_desc_empty')
             }
@@ -472,6 +705,114 @@ const styles = StyleSheet.create({
   catChipTextActive: {
     color: colors.primaryDark,
     fontWeight: '700',
+  },
+  dateFilterWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginVertical: 6,
+    gap: 8,
+  },
+  dateToggle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateToggleActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  dateToggleText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  dateToggleTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  resetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+  },
+  resetBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  datePanel: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginBottom: 6,
+    padding: 12,
+    gap: 8,
+  },
+  dateQuickRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dateLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+  dateChipScroll: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  monthChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    minWidth: 56,
+  },
+  exactDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    gap: 8,
+  },
+  exactDateInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+    padding: 0,
   },
   listContent: {
     paddingBottom: 110,

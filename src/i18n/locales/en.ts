@@ -132,6 +132,14 @@ export const en: TranslationDictionary = {
   tx_record_action: 'Record Transaction',
   tx_delete_confirm_title: 'Delete Transaction',
   tx_delete_confirm_msg: 'Are you sure you want to delete "{title}"?',
+  tx_filter_date_title: 'Date Filter',
+  tx_filter_year: 'Year',
+  tx_filter_month: 'Month',
+  tx_filter_exact_date: 'Specific date',
+  tx_filter_exact_date_placeholder: 'YYYY-MM-DD, e.g. 2026-02-14',
+  tx_filter_reset: 'Reset filters',
+  tx_filter_all_time: 'All time',
+  tx_filter_this_month: 'This month',
 
   // Add / Edit Transaction Modal
   tx_modal_add_title: 'Record Transaction',

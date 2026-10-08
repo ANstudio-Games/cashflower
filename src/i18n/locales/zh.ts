@@ -132,6 +132,14 @@ export const zh: TranslationDictionary = {
   tx_record_action: '记一笔账',
   tx_delete_confirm_title: '删除交易',
   tx_delete_confirm_msg: '确定要删除“{title}”这条记录吗？',
+  tx_filter_date_title: '日期筛选',
+  tx_filter_year: '年份',
+  tx_filter_month: '月份',
+  tx_filter_exact_date: '具体日期',
+  tx_filter_exact_date_placeholder: 'YYYY-MM-DD，例如 2026-02-14',
+  tx_filter_reset: '重置筛选',
+  tx_filter_all_time: '全部时间',
+  tx_filter_this_month: '本月',
 
   // Add / Edit Transaction Modal
   tx_modal_add_title: '记录新交易',
