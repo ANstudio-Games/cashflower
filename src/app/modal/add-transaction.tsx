@@ -24,6 +24,7 @@ import { useI18n } from '@/i18n';
 import { handleTransactionSavedWithAd } from '@/services/ad-service';
 import { useSaveAction } from '@/utils/use-save-action';
 import { isValidISODate } from '@/utils/validate-date';
+import { DateField } from '@/components/date-field';
 
 export default function AddTransactionModal() {
   const router = useRouter();
@@ -348,12 +349,10 @@ export default function AddTransactionModal() {
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>{t('tx_modal_date_label')}</Text>
           <View style={styles.dateRow}>
-            <TextInput
-              style={[styles.textInput, { flex: 1 }]}
+            <DateField
               value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textMuted}
+              onChange={setDate}
+              label={t('tx_modal_date_label')}
             />
             <Pressable
               style={styles.todayBtn}
