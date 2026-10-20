@@ -4,14 +4,18 @@ import mobileAds, {
   InterstitialAd,
   AdEventType,
 } from 'react-native-google-mobile-ads';
-import { AD_COUNTER_KEYS, AdSaveCategory, getAdUnitId, shouldShowAd } from '@/config/ads';
+import { AD_COUNTER_KEYS, AdSaveCategory, getAdUnitId } from '@/config/ads';
+import { processAdSave } from '@/utils/ad-save-policy';
 import { getSetting, setSetting } from '@/db';
 
 let isInitialized = false;
 let interstitialInstance: InterstitialAd | null = null;
 let isInterstitialLoaded = false;
 let isInterstitialLoading = false;
-let onDismissCallback: (() => void) | null = null;
+let onDismissCallback: ((displayed: boolean) => void) | null = null;
+let isInterstitialShowing = false;
+let wasInterstitialOpened = false;
+let saveQueue: Promise<void> = Promise.resolve();
 
 /**
  * Inisialisasi Mobile Ads SDK sekali saat aplikasi terbuka.
@@ -34,7 +38,7 @@ export async function initializeAds(): Promise<void> {
  */
 export function preloadInterstitial(): void {
   if (Platform.OS === 'web') return;
-  if (isInterstitialLoading || isInterstitialLoaded) return;
+  if (isInterstitialLoading || isInterstitialLoaded || isInterstitialShowing) return;
 
   const adUnitId = getAdUnitId('interstitial');
 
@@ -46,18 +50,22 @@ export function preloadInterstitial(): void {
     interstitialInstance.addAdEventListener(AdEventType.LOADED, () => {
       isInterstitialLoaded = true;
       isInterstitialLoading = false;
+      console.info('[AdMob] Interstitial ready');
+    });
+
+    interstitialInstance.addAdEventListener(AdEventType.OPENED, () => {
+      wasInterstitialOpened = true;
+      console.info('[AdMob] Interstitial opened');
     });
 
     interstitialInstance.addAdEventListener(AdEventType.CLOSED, () => {
       isInterstitialLoaded = false;
       isInterstitialLoading = false;
 
-      // Jalankan callback penutupan jika ada
-      if (onDismissCallback) {
-        const cb = onDismissCallback;
-        onDismissCallback = null;
-        cb();
-      }
+      isInterstitialShowing = false;
+      const cb = onDismissCallback;
+      onDismissCallback = null;
+      cb?.(wasInterstitialOpened);
 
       // Preload iklan berikutnya
       preloadInterstitial();
@@ -67,9 +75,10 @@ export function preloadInterstitial(): void {
       isInterstitialLoaded = false;
       isInterstitialLoading = false;
       console.warn('[AdMob] Interstitial Error:', error);
+      isInterstitialShowing = false;
       const cb = onDismissCallback;
       onDismissCallback = null;
-      cb?.();
+      cb?.(wasInterstitialOpened);
 
       // Coba load ulang setelah 20 detik
       setTimeout(() => {
@@ -89,16 +98,20 @@ export function preloadInterstitial(): void {
 
 /**
  * Tampilkan interstitial jika sudah siap muat.
- * Mengembalikan true jika iklan berhasil ditampilkan, false jika belum siap/offline.
+ * Returns true when show is requested; onClose reports whether OPENED was received.
+ * Unavailable or failed ads report false so their due turn can be retried.
  */
-export function showInterstitialIfAvailable(onClose?: () => void): boolean {
-  if (Platform.OS === 'web' || !interstitialInstance || !isInterstitialLoaded) {
-    onClose?.();
+export function showInterstitialIfAvailable(onClose?: (displayed: boolean) => void): boolean {
+  if (Platform.OS === 'web' || !interstitialInstance || !isInterstitialLoaded || isInterstitialShowing) {
+    console.info('[AdMob] Due ad deferred: not ready');
+    onClose?.(false);
     preloadInterstitial();
     return false;
   }
 
   onDismissCallback = onClose || null;
+  wasInterstitialOpened = false;
+  isInterstitialShowing = true;
 
   try {
     isInterstitialLoaded = false;
@@ -106,14 +119,16 @@ export function showInterstitialIfAvailable(onClose?: () => void): boolean {
       console.warn('[AdMob] Gagal menampilkan interstitial:', error);
       const cb = onDismissCallback;
       onDismissCallback = null;
-      cb?.();
+      isInterstitialShowing = false;
+      cb?.(wasInterstitialOpened);
       preloadInterstitial();
     });
     return true;
   } catch (error) {
     console.warn('[AdMob] Gagal memanggil show():', error);
     onDismissCallback = null;
-    onClose?.();
+    isInterstitialShowing = false;
+    onClose?.(wasInterstitialOpened);
     preloadInterstitial();
     return false;
   }
@@ -126,6 +141,7 @@ export function showInterstitialIfAvailable(onClose?: () => void): boolean {
  * - Transaksi #4: Iklan
  * - Transaksi #5 & #6: Jeda
  * - Transaksi #7: Iklan
+ * Jika belum siap/gagal tampil, giliran tetap tertunda sampai simpan berikutnya.
  */
 export function handleTransactionSavedWithAd(
   db: SQLite.SQLiteDatabase,
@@ -134,47 +150,29 @@ export function handleTransactionSavedWithAd(
   return handleSavedWithAd(db, 'transaction', onFinish);
 }
 
-/** Satu preloader bersama, tetapi setiap kategori punya counter sendiri. */
+/** Serialize shared SDK access and counter writes; retain each category's cadence. */
 export async function handleSavedWithAd(
   db: SQLite.SQLiteDatabase,
   category: AdSaveCategory,
   onFinish: () => void
 ): Promise<void> {
-  let finished = false;
-  let resolveFinished!: () => void;
-  const completion = new Promise<void>(resolve => { resolveFinished = resolve; });
-  const safeFinish = () => {
-    if (!finished) {
-      finished = true;
-      try { onFinish(); } finally { resolveFinished(); }
-    }
-  };
-
-  try {
-    // Ambil riwayat jumlah simpan transaksi
+  const operation = saveQueue.then(async () => {
     const counterKey = AD_COUNTER_KEYS[category];
-    const currentCountStr = await getSetting(db, counterKey, '0');
-    const currentCount = parseInt(currentCountStr, 10) || 0;
-    const nextCount = currentCount + 1;
-
-    // Simpan hitungan terbaru
-    await setSetting(db, counterKey, nextCount.toString());
-
-    // Periksa apakah transaksi ini waktunya muncul iklan
-    const isAdTurn = shouldShowAd(nextCount);
-
-    if (isAdTurn) {
-      const shown = showInterstitialIfAvailable(safeFinish);
-      if (!shown) {
-        // Jika iklan belum ready atau offline, langsung lanjutkan tanpa delay
-        safeFinish();
-      }
-      await completion;
-    } else {
-      safeFinish();
-    }
+    const stored = Number(await getSetting(db, counterKey, '0'));
+    const currentCount = Number.isSafeInteger(stored) && stored >= 0 ? stored : 0;
+    await processAdSave(
+      currentCount,
+      () => new Promise<boolean>(resolve => { showInterstitialIfAvailable(resolve); }),
+      nextCount => setSetting(db, counterKey, String(nextCount)),
+    );
+  });
+  // A failure must not poison subsequent saves.
+  saveQueue = operation.catch(() => {});
+  try {
+    await operation;
   } catch (error) {
     console.warn('[AdMob] Gagal memproses counter iklan:', error);
-    safeFinish();
+  } finally {
+    onFinish();
   }
 }
