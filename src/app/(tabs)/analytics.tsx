@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { CashflowBarChart } from '@/components/cashflow-bar-chart';
+import { ComparisonLineChart } from '@/components/comparison-line-chart';
 import { CategoryDonutChart } from '@/components/category-donut-chart';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
@@ -149,6 +150,14 @@ export default function AnalyticsScreen() {
         </View>
         <ChartErrorBoundary title={t('analytics_trend_title')} fallbackText={t('analytics_chart_error')}>
           <CashflowBarChart transactions={transactions} />
+        </ChartErrorBoundary>
+
+        <View style={styles.sectionTitleRow}>
+          <Ionicons name="trending-up" size={18} color={colors.primary} />
+          <Text style={styles.sectionTitle}>{t('compare_title')}</Text>
+        </View>
+        <ChartErrorBoundary title={t('compare_title')} fallbackText={t('analytics_chart_error')}>
+          <ComparisonLineChart transactions={transactions} />
         </ChartErrorBoundary>
 
         {/* Section: Donut Chart Kategori */}
