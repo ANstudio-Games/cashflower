@@ -132,6 +132,8 @@ export const en: TranslationDictionary = {
   tx_record_action: 'Record Transaction',
   tx_delete_confirm_title: 'Delete Transaction',
   tx_delete_confirm_msg: 'Are you sure you want to delete "{title}"?',
+  tx_filter_choose_date: 'Choose a date',
+  tx_filter_clear_date: 'Clear date filter',
   tx_filter_date_title: 'Date Filter',
   tx_filter_year: 'Year',
   tx_filter_month: 'Month',

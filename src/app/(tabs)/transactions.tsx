@@ -16,6 +16,9 @@ import { TransactionItem } from '@/components/transaction-item';
 import { EmptyState } from '@/components/empty-state';
 import { colors } from '@/theme/colors';
 import { useI18n } from '@/i18n';
+import { DateField } from '@/components/date-field';
+import { isValidISODate } from '@/utils/validate-date';
+import { ALL_DATES, updateDateFilter, matchesDateFilter, categoryForType } from '@/utils/transaction-filters';
 
 export default function TransactionsScreen() {
   const router = useRouter();
@@ -27,15 +30,18 @@ export default function TransactionsScreen() {
     getTransactionTitle,
     getTransactionNotes,
     getMonthNames,
+    formatDateFull,
   } = useI18n();
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [walletFilter, setWalletFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<number | 'all'>('all');
-  const [monthFilter, setMonthFilter] = useState<number | 'all'>('all');
-  const [exactDate, setExactDate] = useState('');
+  const [dateFilter, setDateFilter] = useState(ALL_DATES);
+  const { year: yearFilter, month: monthFilter, exactDate } = dateFilter;
+  const setYearFilter = (year: number | 'all') => setDateFilter(current => updateDateFilter(current, { year }));
+  const setMonthFilter = (month: number | 'all') => setDateFilter(current => updateDateFilter(current, { month }));
+  const setExactDate = (exactDate: string) => setDateFilter(current => updateDateFilter(current, { exactDate }));
   const [showDateFilter, setShowDateFilter] = useState(false);
 
   const monthNames = getMonthNames();
@@ -46,7 +52,7 @@ export default function TransactionsScreen() {
     const nowYear = new Date().getFullYear();
     years.add(nowYear);
     for (const tx of transactions) {
-      if (tx?.date && /^\d{4}-\d{2}-\d{2}/.test(tx.date)) {
+      if (tx?.date && isValidISODate(tx.date)) {
         const y = parseInt(tx.date.slice(0, 4), 10);
         if (!isNaN(y)) years.add(y);
       }
@@ -64,14 +70,10 @@ export default function TransactionsScreen() {
 
   const handleTypeChange = (next: 'all' | 'expense' | 'income' | 'transfer') => {
     setTypeFilter(next);
-    // Reset kategori kalau kategori terpilih tidak cocok dengan tipe baru
-    if (next === 'expense' || next === 'income') {
-      const stillVisible = categories.some((c) => c.id === categoryFilter && c.type === next);
-      if (categoryFilter !== 'all' && !stillVisible) setCategoryFilter('all');
-    }
+    setCategoryFilter(current => categoryForType(next, current, categories));
   };
 
-  const isExactDateValid = /^\d{4}-\d{2}-\d{2}$/.test(exactDate.trim());
+  const isExactDateValid = isValidISODate(exactDate);
 
   const hasActiveDateFilter =
     yearFilter !== 'all' || monthFilter !== 'all' || isExactDateValid;
@@ -80,34 +82,30 @@ export default function TransactionsScreen() {
     search.trim().length > 0 ||
     typeFilter !== 'all' ||
     categoryFilter !== 'all' ||
-    walletFilter !== 'all' ||
+    (isMultiWalletEnabled && walletFilter !== 'all') ||
     hasActiveDateFilter;
 
   const dateFilterSummary = useMemo(() => {
-    if (isExactDateValid) return exactDate.trim();
+    if (isExactDateValid) return formatDateFull(exactDate);
     if (yearFilter !== 'all' && monthFilter !== 'all') {
       return `${monthNames[(monthFilter as number) - 1]} ${yearFilter}`;
     }
     if (yearFilter !== 'all') return String(yearFilter);
     if (monthFilter !== 'all') return `${monthNames[(monthFilter as number) - 1]}`;
     return t('tx_filter_all_time');
-  }, [isExactDateValid, exactDate, yearFilter, monthFilter, monthNames, t]);
+  }, [isExactDateValid, exactDate, yearFilter, monthFilter, monthNames, t, formatDateFull]);
 
   const resetAllFilters = () => {
     setSearch('');
     setTypeFilter('all');
     setCategoryFilter('all');
     setWalletFilter('all');
-    setYearFilter('all');
-    setMonthFilter('all');
-    setExactDate('');
+    setDateFilter(ALL_DATES);
   };
 
   const applyThisMonth = () => {
     const now = new Date();
-    setYearFilter(now.getFullYear());
-    setMonthFilter(now.getMonth() + 1);
-    setExactDate('');
+    setDateFilter({ year: now.getFullYear(), month: now.getMonth() + 1, exactDate: '' });
   };
 
   const filteredTransactions = useMemo(() => {
@@ -133,20 +131,7 @@ export default function TransactionsScreen() {
         const matchDest = tx?.destination_wallet_id === walletFilter;
         if (!matchSource && !matchDest) return false;
       }
-      // Year filter (YYYY-MM-DD)
-      if (yearFilter !== 'all') {
-        if (!tx?.date || tx.date.slice(0, 4) !== String(yearFilter)) return false;
-      }
-      // Month filter (1-12)
-      if (monthFilter !== 'all') {
-        const mm = tx?.date?.slice(5, 7);
-        if (mm !== String(monthFilter).padStart(2, '0')) return false;
-      }
-      // Exact date filter (YYYY-MM-DD)
-      if (isExactDateValid) {
-        if (tx?.date !== exactDate.trim()) return false;
-      }
-      return true;
+      return matchesDateFilter(tx.date, dateFilter);
     });
   }, [
     transactions,
@@ -154,10 +139,7 @@ export default function TransactionsScreen() {
     typeFilter,
     categoryFilter,
     walletFilter,
-    yearFilter,
-    monthFilter,
-    exactDate,
-    isExactDateValid,
+    dateFilter,
     isMultiWalletEnabled,
     getTransactionTitle,
     getTransactionNotes,
@@ -276,6 +258,8 @@ export default function TransactionsScreen() {
       {/* Date Filter Toggle */}
       <View style={styles.dateFilterWrap}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showDateFilter }}
           style={[styles.dateToggle, hasActiveDateFilter && styles.dateToggleActive]}
           onPress={() => setShowDateFilter((v) => !v)}>
           <Ionicons
@@ -288,17 +272,6 @@ export default function TransactionsScreen() {
             numberOfLines={1}>
             {t('tx_filter_date_title')}: {dateFilterSummary}
           </Text>
-          {hasActiveDateFilter && (
-            <Pressable
-              hitSlop={8}
-              onPress={() => {
-                setYearFilter('all');
-                setMonthFilter('all');
-                setExactDate('');
-              }}>
-              <Ionicons name="close-circle" size={16} color={colors.primaryDark} />
-            </Pressable>
-          )}
           <Ionicons
             name={showDateFilter ? 'chevron-up' : 'chevron-down'}
             size={15}
@@ -306,8 +279,14 @@ export default function TransactionsScreen() {
           />
         </Pressable>
 
+        {hasActiveDateFilter && (
+          <Pressable accessibilityRole="button" accessibilityLabel={t('tx_filter_clear_date')}
+            style={styles.resetBtn} onPress={() => setDateFilter(ALL_DATES)}>
+            <Ionicons name="close-circle" size={20} color={colors.primaryDark} />
+          </Pressable>
+        )}
         {hasActiveFilters && (
-          <Pressable style={styles.resetBtn} onPress={resetAllFilters} hitSlop={8}>
+          <Pressable accessibilityRole="button" style={styles.resetBtn} onPress={resetAllFilters} hitSlop={8}>
             <Ionicons name="refresh-outline" size={13} color={colors.primaryDark} />
             <Text style={styles.resetBtnText}>{t('tx_filter_reset')}</Text>
           </Pressable>
@@ -315,15 +294,11 @@ export default function TransactionsScreen() {
       </View>
 
       {showDateFilter && (
-        <View style={styles.datePanel}>
+        <ScrollView style={styles.datePanel} contentContainerStyle={{ padding: 12, gap: 8 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
           <View style={styles.dateQuickRow}>
             <Pressable
               style={[styles.catChip, !hasActiveDateFilter && styles.catChipActive]}
-              onPress={() => {
-                setYearFilter('all');
-                setMonthFilter('all');
-                setExactDate('');
-              }}>
+              onPress={() => setDateFilter(ALL_DATES)}>
               <Text
                 style={[styles.catChipText, !hasActiveDateFilter && styles.catChipTextActive]}>
                 {t('tx_filter_all_time')}
@@ -395,21 +370,19 @@ export default function TransactionsScreen() {
 
           <Text style={styles.dateLabel}>{t('tx_filter_exact_date')}</Text>
           <View style={styles.exactDateRow}>
-            <TextInput
-              style={styles.exactDateInput}
-              placeholder={t('tx_filter_exact_date_placeholder')}
-              placeholderTextColor={colors.textMuted}
+            <DateField
               value={exactDate}
-              onChangeText={setExactDate}
-              autoCapitalize="none"
+              onChange={setExactDate}
+              label={t('tx_filter_exact_date')}
+              placeholder={t('tx_filter_choose_date')}
             />
             {exactDate.length > 0 && (
-              <Pressable onPress={() => setExactDate('')} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('tx_filter_clear_date')} onPress={() => setExactDate('')} hitSlop={8}>
                 <Ionicons name="close-circle" size={18} color={colors.textMuted} />
               </Pressable>
             )}
           </View>
-        </View>
+        </ScrollView>
       )}
 
       {/* Horizontal Wallet Filter Chips */}
@@ -462,6 +435,7 @@ export default function TransactionsScreen() {
       )}
 
       {/* Horizontal Category Chips Container with Guaranteed Visibility */}
+      {typeFilter !== 'transfer' && (
       <View style={styles.categoryScrollContainer}>
         <ScrollView
           horizontal
@@ -502,6 +476,7 @@ export default function TransactionsScreen() {
           })}
         </ScrollView>
       </View>
+      )}
 
       {/* Transaction List */}
       <FlatList
@@ -745,6 +720,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    minHeight: 44,
     borderRadius: 10,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
@@ -762,8 +738,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginHorizontal: 16,
     marginBottom: 6,
-    padding: 12,
-    gap: 8,
+    maxHeight: 280,
+    flexGrow: 0,
   },
   dateQuickRow: {
     flexDirection: 'row',
@@ -800,19 +776,7 @@ const styles = StyleSheet.create({
   exactDateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
     gap: 8,
-  },
-  exactDateInput: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    padding: 0,
   },
   listContent: {
     paddingBottom: 110,

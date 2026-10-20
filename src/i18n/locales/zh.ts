@@ -132,6 +132,8 @@ export const zh: TranslationDictionary = {
   tx_record_action: '记一笔账',
   tx_delete_confirm_title: '删除交易',
   tx_delete_confirm_msg: '确定要删除“{title}”这条记录吗？',
+  tx_filter_choose_date: '选择日期',
+  tx_filter_clear_date: '清除日期筛选',
   tx_filter_date_title: '日期筛选',
   tx_filter_year: '年份',
   tx_filter_month: '月份',

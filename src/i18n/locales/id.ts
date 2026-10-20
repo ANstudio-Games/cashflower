@@ -132,6 +132,8 @@ export const id: TranslationDictionary = {
   tx_record_action: 'Catat Transaksi',
   tx_delete_confirm_title: 'Hapus Transaksi',
   tx_delete_confirm_msg: 'Yakin ingin menghapus catatan "{title}"?',
+  tx_filter_choose_date: 'Pilih tanggal',
+  tx_filter_clear_date: 'Hapus filter tanggal',
   tx_filter_date_title: 'Filter Tanggal',
   tx_filter_year: 'Tahun',
   tx_filter_month: 'Bulan',
