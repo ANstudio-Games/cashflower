@@ -52,6 +52,20 @@ test('signing key path is initialized at step runtime before restoring the key',
   assert.ok(workflow.indexOf('name: Set signing key path') < workflow.indexOf('name: Restore signing key'));
 });
 
+test('CI builds compressed ARM64 and universal APKs and preserves updater asset naming', () => {
+  const workflow = readFileSync('.github/workflows/android-release.yml', 'utf8');
+  assert.match(workflow, /-PreactNativeArchitectures=arm64-v8a\s+-Pexpo\.useLegacyPackaging=true/);
+  assert.match(workflow, /-PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64\s+-Pexpo\.useLegacyPackaging=true/);
+  assert.match(workflow, /cashflower-\$\{VERSION\}\.apk/);
+  assert.match(workflow, /cashflower-\$\{VERSION\}-arm64\.apk/);
+  assert.match(workflow, /for APK in release\/\*\.apk/);
+  assert.match(workflow, /sha256sum \*\.apk > SHA256SUMS\.txt/);
+  assert.match(workflow, /release\/\*\.apk release\/SHA256SUMS\.txt/);
+  const primary = workflow.indexOf('"../release/cashflower-${VERSION}-arm64.apk"');
+  const universal = workflow.indexOf('-PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64');
+  assert.ok(primary > 0 && primary < universal, 'copy ARM64 artifact before the universal build overwrites it');
+});
+
 test('CI fails rather than silently using unexpected signing configuration', () => {
   assert.throws(() => configureAndroid(''), /buildTypes/);
   assert.throws(() => configureAndroid('    buildTypes { release {} }'), /signing/);

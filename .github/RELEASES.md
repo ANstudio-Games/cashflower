@@ -2,7 +2,7 @@
 
 The `Android release` workflow runs on pushes to `main`. It reads `expo.version`
 and `expo.android.versionCode` from `app.json`, generates the Android project,
-builds a signed APK, and publishes it with a checksum to GitHub Releases.
+builds signed ARM64 and universal APKs, and publishes them with checksums to GitHub Releases.
 If a release for that version already exists, the build is skipped.
 
 ## One-time setup
@@ -52,6 +52,23 @@ Android updates. The package.json version is not used as the app version.
 The native Android folder is generated in CI because it is ignored by Git.
 Any required native customization must be represented by app configuration,
 config plugins, or a committed build script, not only local Android files.
+
+## APK sizes and architecture support
+
+- `cashflower-VERSION-arm64.apk`: smaller download for ARM64 Android devices.
+- `cashflower-VERSION.apk`: universal fallback containing ARM64, ARMv7, x86,
+  and x86_64 libraries. The legacy name stays universal so installed versions'
+  in-app updater remains compatible with non-ARM64 devices.
+
+Both builds pass `-Pexpo.useLegacyPackaging=true` directly to Gradle to compress
+native libraries even after prebuild. CI verifies signatures, expected ABIs,
+and native-library compression, and prints actual artifact sizes. Compression
+reduces download size, not necessarily installed size. Minification/resource
+shrinking remain unchanged pending device regression testing.
+
+Two builds share the generated project and Gradle outputs, but take longer than
+one universal build. Actual resulting sizes must be measured in Actions; there
+is no fixed size guarantee.
 
 ## Failures and retries
 
