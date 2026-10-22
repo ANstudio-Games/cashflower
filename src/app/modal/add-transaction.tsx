@@ -1,3 +1,4 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -17,7 +18,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+import { formatCurrency } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { TransactionType } from '@/types';
 import { useI18n } from '@/i18n';
@@ -85,11 +86,6 @@ export default function AddTransactionModal() {
     }
   }, [type, availableCategories, selectedCategory, isEditing]);
 
-  const handleAmountChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawAmount, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawAmount(nextRaw);
-  };
 
   const handleSubmit = async () => {
     if (params.id && transactions.find(item => item.id === params.id)?.type === 'transfer') {
@@ -221,13 +217,13 @@ export default function AddTransactionModal() {
           <Text style={styles.inputLabel}>{t('tx_modal_amount_label')}</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
-            <TextInput
+            <NumberInput
               style={styles.amountInput}
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={formatNumberInput(rawAmount, language)}
-              onChangeText={handleAmountChange}
+              value={rawAmount}
+              onChangeText={setRawAmount}
               autoFocus={!isEditing}
             />
           </View>

@@ -1,3 +1,4 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useState } from 'react';
 import {
   View,
@@ -16,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+import { formatCurrency } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { useI18n } from '@/i18n';
 import { useSaveAction } from '@/utils/use-save-action';
@@ -47,11 +48,6 @@ export default function TransferFundsModal() {
 
   const transferAmount = parseInt(rawAmount, 10) || 0;
 
-  const handleAmountChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawAmount, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawAmount(nextRaw);
-  };
 
   const handleSwap = () => {
     const temp = sourceId;
@@ -195,13 +191,13 @@ export default function TransferFundsModal() {
           <Text style={styles.amountLabel}>{t('transfer_modal_amount_label')}</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
-            <TextInput
+            <NumberInput
               style={styles.amountInput}
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={formatNumberInput(rawAmount, language)}
-              onChangeText={handleAmountChange}
+              value={rawAmount}
+              onChangeText={setRawAmount}
               autoFocus
             />
           </View>

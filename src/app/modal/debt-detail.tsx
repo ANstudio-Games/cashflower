@@ -1,3 +1,4 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -17,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors, shadowStyles } from '@/theme/colors';
-import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+import { formatCurrency } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { DebtPayment } from '@/types';
 import { useI18n } from '@/i18n';
@@ -118,11 +119,6 @@ export default function DebtDetailModal() {
   const themeColor = isReceivable ? colors.receivable : colors.debt;
   const themeSoft = isReceivable ? colors.receivableSoft : colors.debtSoft;
 
-  const handleAmountChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawAmount, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawAmount(nextRaw);
-  };
 
   const handleOpenInstallmentForm = (prefillFull: boolean = false) => {
     if (prefillFull) {
@@ -431,13 +427,13 @@ export default function DebtDetailModal() {
               <Text style={styles.formLabel}>{t('debt_detail_amount_label')}</Text>
               <View style={styles.amountInputRow}>
                 <Text style={styles.amountPrefix}>Rp</Text>
-                <TextInput
+                <NumberInput
                   style={styles.amountInput}
                   placeholder="0"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
-                  value={formatNumberInput(rawAmount, language)}
-                  onChangeText={handleAmountChange}
+                  value={rawAmount}
+                  onChangeText={setRawAmount}
                   autoFocus
                 />
               </View>

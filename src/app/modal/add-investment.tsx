@@ -1,3 +1,4 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useState } from 'react';
 import {
   View,
@@ -16,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+import { formatCurrency } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { InvestmentInstrument } from '@/types';
 import { useI18n } from '@/i18n';
@@ -158,14 +159,14 @@ export default function AddInvestmentModal() {
 
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>{t('inv_modal_capital')}</Text>
-          <TextInput
+          <NumberInput
             accessibilityLabel={t('inv_modal_capital')}
             style={styles.textInput}
             keyboardType="number-pad"
             placeholder="0"
             placeholderTextColor={colors.textMuted}
-            value={formatNumberInput(rawCapital, language)}
-            onChangeText={text => setRawCapital(parseCurrencyWithBackspace(text, formatNumberInput(rawCapital, language)))}
+            value={rawCapital}
+            onChangeText={setRawCapital}
           />
         </View>
         <Text style={styles.inputHelp}>{t('inv_modal_price_help')}</Text>
@@ -173,7 +174,7 @@ export default function AddInvestmentModal() {
         <View style={styles.pricesRow}>
           <View style={[styles.inputSection, { flex: 1 }]}>
             <Text style={styles.sectionTitle}>{t('inv_modal_buy_price')}</Text>
-            <TextInput
+            <NumberInput
               style={styles.textInput}
               accessibilityLabel={t('inv_modal_buy_price')}
               keyboardType="decimal-pad"
@@ -186,7 +187,7 @@ export default function AddInvestmentModal() {
 
           <View style={[styles.inputSection, { flex: 1 }]}>
             <Text style={styles.sectionTitle}>{t('inv_modal_sell_price')}</Text>
-            <TextInput
+            <NumberInput
               style={styles.textInput}
               accessibilityLabel={t('inv_modal_sell_price')}
               keyboardType="decimal-pad"

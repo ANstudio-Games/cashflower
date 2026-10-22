@@ -1,3 +1,4 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -17,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+
 import { WalletType } from '@/types';
 import { useI18n } from '@/i18n';
 import { useSaveAction } from '@/utils/use-save-action';
@@ -92,11 +93,6 @@ export default function AddWalletModal() {
     }
   }, [params.id, wallets, getWalletName]);
 
-  const handleBalanceChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawInitialBalance, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawInitialBalance(nextRaw);
-  };
 
   const handleTypeSelect = (selectedType: WalletType) => {
     setType(selectedType);
@@ -231,13 +227,13 @@ export default function AddWalletModal() {
           </Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
-            <TextInput
+            <NumberInput
               style={styles.amountInput}
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={formatNumberInput(rawInitialBalance, language)}
-              onChangeText={handleBalanceChange}
+              value={rawInitialBalance}
+              onChangeText={setRawInitialBalance}
             />
           </View>
         </View>
