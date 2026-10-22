@@ -17,6 +17,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useSQLiteContext } from 'expo-sqlite';
+import { handleSavedWithAd } from '@/services/ad-service';
 import { useI18n } from '@/i18n';
 import { useSaveAction } from '@/utils/use-save-action';
 import { colors, shadowStyles } from '@/theme/colors';
@@ -24,6 +26,7 @@ import { formatCurrency } from '@/utils/format-currency';
 
 export default function AddPlanModal() {
   const router = useRouter();
+  const db = useSQLiteContext();
   const { isSaving, runSave } = useSaveAction();
   const params = useLocalSearchParams<{ id?: string }>();
   const isEditing = Boolean(params.id);
@@ -101,9 +104,11 @@ export default function AddPlanModal() {
           is_pinned: isPinned ? 1 : 0,
           notes: notes.trim() || null,
         });
-        Alert.alert(t('common_success'), t('plan_modal_success_add'), [
-          { text: t('common_ok'), onPress: () => router.back() },
-        ]);
+        await handleSavedWithAd(db, 'plan', () => {
+          Alert.alert(t('common_success'), t('plan_modal_success_add'), [
+            { text: t('common_ok'), onPress: () => router.back() },
+          ]);
+        });
       }
     } catch (err) {
       console.error(err);

@@ -1,35 +1,42 @@
-import React, { useLayoutEffect, useRef } from 'react';
-import { Platform, TextInput, type TextInputProps } from 'react-native';
+import React from 'react';
+import { TextInput, type TextInputProps } from 'react-native';
 
-/** Plain numeric editing; grouping belongs to display text, not editable values. */
-export function NumberInput({ keyboardType = 'number-pad', onChangeText, ...props }: TextInputProps) {
+/** Group rupiah for editing, but keep form state unformatted for calculations/saving. */
+export function NumberInput({ keyboardType = 'number-pad', value, onChangeText, ...props }: TextInputProps) {
   const decimal = keyboardType === 'decimal-pad';
-  const ref = useRef<TextInput>(null);
-  useLayoutEffect(() => {
-    if (Platform.OS === 'web' && ref.current) {
-      // RN Web writes type=text during its own layout; apply numeric semantics afterward.
-      const input = ref.current as unknown as HTMLInputElement;
-      const applyType = () => {
-        if (input.type !== 'number') input.setAttribute('type', 'number');
-      };
-      applyType();
-      input.setAttribute('min', '0');
-      input.setAttribute('step', decimal ? 'any' : '1');
-      const observer = new MutationObserver(applyType);
-      observer.observe(input, { attributes: true, attributeFilter: ['type'] });
-      return () => observer.disconnect();
-    }
-  });
+  const raw = (value ?? '').replace(',', '.');
+  const [integer, fraction] = raw.split('.');
+  const formatted = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    + (decimal && fraction !== undefined ? `,${fraction}` : '');
+
   return (
     <TextInput
       {...props}
+      value={formatted}
       keyboardType={keyboardType}
       onChangeText={text => {
-        const valid = decimal ? /^\d*([.,]\d*)?$/.test(text) : /^\d*$/.test(text);
-        if (valid) onChangeText?.(text);
+        // A dot typed at the end by a decimal keyboard is a decimal mark,
+        // whereas existing dots in the displayed value are thousands separators.
+        if (decimal && !formatted.includes(',') && text === `${formatted}.`) {
+          onChangeText?.(`${raw}.`);
+          return;
+        }
+        let next = text.replace(/\./g, '').replace(/[^\d,]/g, '');
+        if (!decimal) next = next.replace(/,/g, '');
+        if (!/^\d*(,\d*)?$/.test(next)) return;
+
+        // Deleting a grouping dot must delete the preceding digit as well;
+        // otherwise formatting would immediately put the dot back.
+        if (text.length === formatted.length - 1 && next === raw.replace('.', ',')) {
+          let index = 0;
+          while (index < text.length && text[index] === formatted[index]) index++;
+          if (formatted[index] === '.' && index > 0) {
+            next = (formatted.slice(0, index - 1) + formatted.slice(index + 1)).replace(/\./g, '');
+          }
+        }
+        onChangeText?.(next.replace(',', '.'));
       }}
       inputMode={decimal ? 'decimal' : 'numeric'}
-      ref={ref}
     />
   );
 }

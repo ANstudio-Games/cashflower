@@ -1,6 +1,6 @@
 import { DateField } from '@/components/date-field';
 import { NumberInput } from '@/components/number-input';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
@@ -33,7 +33,11 @@ export default function AddInvestmentModal() {
   const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
-  const { createInvestment } = useFinance();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { investments, createInvestment, editInvestment } = useFinance();
+  const existing = investments.find(item => item.id === id);
+  const isEditing = !!id;
+  const isLegacy = !!existing && existing.capital == null;
   const db = useSQLiteContext();
   const { t, language } = useI18n();
 
@@ -54,15 +58,26 @@ export default function AddInvestmentModal() {
   const [tradeDate, setTradeDate] = useState(getTodayISO());
   const [notes, setNotes] = useState('');
 
+  useEffect(() => {
+    if (!existing) return;
+    setInstrument(existing.instrument_type);
+    setAssetName(existing.asset_name);
+    setRawCapital(existing.capital == null ? '' : String(existing.capital));
+    setRawBuy(String(existing.buy_price));
+    setRawSell(String(existing.sell_price));
+    setTradeDate(existing.trade_date);
+    setNotes(existing.notes ?? '');
+  }, [existing]);
+
   const handlePriceChange = (text: string, setValue: (value: string) => void) => {
     // No grouping separators: accept either decimal separator from mobile keyboards.
     if (/^\d*([.,]\d*)?$/.test(text)) setValue(text);
   };
-  const capital = Number(rawCapital);
+  const capital = isLegacy ? Number(rawBuy.replace(',', '.')) : Number(rawCapital);
   const buyPrice = Number(rawBuy.replace(',', '.'));
   const sellPrice = Number(rawSell.replace(',', '.'));
   let result: ReturnType<typeof calculateInvestmentReturn> | null = null;
-  if (rawCapital && rawBuy && rawSell) {
+  if ((isLegacy || rawCapital) && rawBuy && rawSell) {
     try { result = calculateInvestmentReturn(capital, buyPrice, sellPrice); } catch { /* Incomplete or invalid input. */ }
   }
   const pnl = result?.pnl ?? 0;
@@ -92,16 +107,23 @@ export default function AddInvestmentModal() {
     }
 
     try {
-      await createInvestment({
+      if (isEditing && !existing) throw new Error('Investment not found');
+      const values = {
         instrument_type: instrument,
         asset_name: assetName.trim().toUpperCase(),
-        capital,
+        capital: isLegacy ? null : capital,
         buy_price: buyPrice,
         sell_price: sellPrice,
         trade_date: tradeDate,
         notes: notes.trim() || null,
-      });
-      await handleSavedWithAd(db, 'trading', () => router.back());
+      };
+      if (existing) {
+        await editInvestment({ ...existing, ...values });
+        router.back();
+      } else {
+        await createInvestment(values);
+        await handleSavedWithAd(db, 'trading', () => router.back());
+      }
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), t('inv_modal_err_save'));
@@ -117,7 +139,7 @@ export default function AddInvestmentModal() {
         <Pressable accessibilityRole="button" accessibilityLabel={t('a11y_close')} onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
           <Ionicons name="close" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>{t('inv_modal_title')}</Text>
+        <Text style={styles.headerTitle}>{t(isEditing ? 'inv_modal_edit_title' : 'inv_modal_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -158,7 +180,7 @@ export default function AddInvestmentModal() {
           />
         </View>
 
-        <View style={styles.inputSection}>
+        {!isLegacy && <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>{t('inv_modal_capital')}</Text>
           <NumberInput
             accessibilityLabel={t('inv_modal_capital')}
@@ -169,15 +191,15 @@ export default function AddInvestmentModal() {
             value={rawCapital}
             onChangeText={setRawCapital}
           />
-        </View>
-        <Text style={styles.inputHelp}>{t('inv_modal_price_help')}</Text>
+        </View>}
+        <Text style={styles.inputHelp}>{t(isLegacy ? 'inv_legacy' : 'inv_modal_price_help')}</Text>
         {/* Prices Row */}
         <View style={styles.pricesRow}>
           <View style={[styles.inputSection, { flex: 1 }]}>
-            <Text style={styles.sectionTitle}>{t('inv_modal_buy_price')}</Text>
+            <Text style={styles.sectionTitle}>{t(isLegacy ? 'inv_legacy_buy' : 'inv_modal_buy_price')}</Text>
             <NumberInput
               style={styles.textInput}
-              accessibilityLabel={t('inv_modal_buy_price')}
+              accessibilityLabel={t(isLegacy ? 'inv_legacy_buy' : 'inv_modal_buy_price')}
               keyboardType="decimal-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
@@ -187,10 +209,10 @@ export default function AddInvestmentModal() {
           </View>
 
           <View style={[styles.inputSection, { flex: 1 }]}>
-            <Text style={styles.sectionTitle}>{t('inv_modal_sell_price')}</Text>
+            <Text style={styles.sectionTitle}>{t(isLegacy ? 'inv_legacy_sell' : 'inv_modal_sell_price')}</Text>
             <NumberInput
               style={styles.textInput}
-              accessibilityLabel={t('inv_modal_sell_price')}
+              accessibilityLabel={t(isLegacy ? 'inv_legacy_sell' : 'inv_modal_sell_price')}
               keyboardType="decimal-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
@@ -268,7 +290,7 @@ export default function AddInvestmentModal() {
           onPress={() => { void runSave(handleSave); }}>
           {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-          <Text style={styles.submitBtnText}>{t('inv_modal_save')}</Text>
+          <Text style={styles.submitBtnText}>{t(isEditing ? 'common_save' : 'inv_modal_save')}</Text>
                   </>)}
 </Pressable>
       </ScrollView>

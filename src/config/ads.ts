@@ -9,7 +9,7 @@ export const AD_CONFIG = {
   },
 };
 
-export type AdSaveCategory = 'transaction' | 'debt' | 'trading';
+export type AdSaveCategory = 'transaction' | 'debt' | 'trading' | 'category' | 'wallet' | 'plan' | 'budget' | 'transfer' | 'debt-payment';
 
 export function getAdUnitId(type: 'interstitial' = 'interstitial', isProd?: boolean): string {
   const isProduction =

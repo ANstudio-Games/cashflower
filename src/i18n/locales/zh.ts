@@ -307,6 +307,7 @@ export const zh: TranslationDictionary = {
   inv_capital_label: '本金：',
   inv_legacy_buy: '买入总额：',
   inv_legacy_sell: '卖出总额：',
+  inv_modal_edit_title: '编辑投资',
   inv_modal_title: '记录实盘交易 / 投资',
   inv_modal_select_inst: '选择投资品种',
   inv_modal_asset_name: '资产标的 / 交易对',

@@ -307,6 +307,7 @@ export const en: TranslationDictionary = {
   inv_capital_label: 'Capital: ',
   inv_legacy_buy: 'Total purchase: ',
   inv_legacy_sell: 'Total sale: ',
+  inv_modal_edit_title: 'Edit Investment',
   inv_modal_title: 'Record Trade / Investment',
   inv_modal_select_inst: 'Select Instrument',
   inv_modal_asset_name: 'Asset Name / Pair',

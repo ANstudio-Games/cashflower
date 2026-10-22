@@ -18,6 +18,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useSQLiteContext } from 'expo-sqlite';
+import { handleSavedWithAd } from '@/services/ad-service';
 import { colors, shadowStyles } from '@/theme/colors';
 import { formatCurrency } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
@@ -27,6 +29,7 @@ import { isValidISODate } from '@/utils/validate-date';
 
 export default function DebtDetailModal() {
   const router = useRouter();
+  const db = useSQLiteContext();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
@@ -167,9 +170,11 @@ export default function DebtDetailModal() {
       });
 
       await loadPayments();
-      setShowPaymentForm(false);
-      setRawAmount('');
-      setNotes('');
+      await handleSavedWithAd(db, 'debt-payment', () => {
+        setShowPaymentForm(false);
+        setRawAmount('');
+        setNotes('');
+      });
     } catch (err) {
       console.error('Error saving payment:', err);
       Alert.alert(t('common_error'), t('debt_detail_err_save'));

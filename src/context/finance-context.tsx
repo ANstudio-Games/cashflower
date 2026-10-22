@@ -33,6 +33,7 @@ import {
   deleteDebtPayment,
   getInvestments,
   addInvestment,
+  updateInvestment,
   deleteInvestment,
   getInvestmentSummary,
   getBudgets,
@@ -98,6 +99,7 @@ interface FinanceContextType {
   }) => Promise<void>;
   deleteDebtPaymentById: (paymentId: string) => Promise<void>;
   createInvestment: (item: Omit<Investment, 'id' | 'created_at' | 'pnl' | 'pnl_percentage'>) => Promise<void>;
+  editInvestment: (item: Investment) => Promise<void>;
   deleteInvestmentById: (id: string) => Promise<void>;
   saveNewBudget: (budget: { id: string; category_id: string | null; monthly_limit: number }) => Promise<void>;
   removeBudget: (id: string) => Promise<void>;
@@ -400,6 +402,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await refreshAll();
   };
 
+  const editInvestment = async (item: Investment) => {
+    const { pnl, pnlPercentage: pnl_percentage } = calculateInvestmentReturn(item.capital ?? item.buy_price, item.buy_price, item.sell_price);
+    await updateInvestment(db, { ...item, pnl, pnl_percentage });
+    triggerHaptic();
+    await refreshAll();
+  };
+
   const deleteInvestmentById = async (id: string) => {
     await deleteInvestment(db, id);
     triggerHaptic();
@@ -549,6 +558,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         createDebtPayment,
         deleteDebtPaymentById,
         createInvestment,
+        editInvestment,
         deleteInvestmentById,
         saveNewBudget,
         removeBudget,
