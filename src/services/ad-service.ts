@@ -4,9 +4,8 @@ import mobileAds, {
   InterstitialAd,
   AdEventType,
 } from 'react-native-google-mobile-ads';
-import { AD_COUNTER_KEYS, AdSaveCategory, getAdUnitId } from '@/config/ads';
+import { AdSaveCategory, getAdUnitId } from '@/config/ads';
 import { processAdSave } from '@/utils/ad-save-policy';
-import { getSetting, setSetting } from '@/db';
 
 let isInitialized = false;
 let interstitialInstance: InterstitialAd | null = null;
@@ -80,10 +79,7 @@ export function preloadInterstitial(): void {
       onDismissCallback = null;
       cb?.(wasInterstitialOpened);
 
-      // Coba load ulang setelah 20 detik
-      setTimeout(() => {
-        preloadInterstitial();
-      }, 20000);
+      // No background retry; the next save can request a fresh preload.
     });
   }
 
@@ -99,11 +95,11 @@ export function preloadInterstitial(): void {
 /**
  * Tampilkan interstitial jika sudah siap muat.
  * Returns true when show is requested; onClose reports whether OPENED was received.
- * Unavailable or failed ads report false so their due turn can be retried.
+ * Unavailable or failed ads are skipped without retaining a pending turn.
  */
 export function showInterstitialIfAvailable(onClose?: (displayed: boolean) => void): boolean {
   if (Platform.OS === 'web' || !interstitialInstance || !isInterstitialLoaded || isInterstitialShowing) {
-    console.info('[AdMob] Due ad deferred: not ready');
+    console.info('[AdMob] Save ad skipped: not ready');
     onClose?.(false);
     preloadInterstitial();
     return false;
@@ -121,7 +117,6 @@ export function showInterstitialIfAvailable(onClose?: (displayed: boolean) => vo
       onDismissCallback = null;
       isInterstitialShowing = false;
       cb?.(wasInterstitialOpened);
-      preloadInterstitial();
     });
     return true;
   } catch (error) {
@@ -129,20 +124,11 @@ export function showInterstitialIfAvailable(onClose?: (displayed: boolean) => vo
     onDismissCallback = null;
     isInterstitialShowing = false;
     onClose?.(wasInterstitialOpened);
-    preloadInterstitial();
     return false;
   }
 }
 
-/**
- * Menangani penambahan counter transaksi dan memunculkan iklan sesuai pola:
- * - Transaksi #1: Iklan
- * - Transaksi #2 & #3: Jeda
- * - Transaksi #4: Iklan
- * - Transaksi #5 & #6: Jeda
- * - Transaksi #7: Iklan
- * Jika belum siap/gagal tampil, giliran tetap tertunda sampai simpan berikutnya.
- */
+/** Attempt an interstitial after each newly saved transaction. */
 export function handleTransactionSavedWithAd(
   db: SQLite.SQLiteDatabase,
   onFinish: () => void
@@ -150,20 +136,16 @@ export function handleTransactionSavedWithAd(
   return handleSavedWithAd(db, 'transaction', onFinish);
 }
 
-/** Serialize shared SDK access and counter writes; retain each category's cadence. */
+/** Serialize shared SDK access. Every category attempts an ad on every new save. */
 export async function handleSavedWithAd(
-  db: SQLite.SQLiteDatabase,
+  _db: SQLite.SQLiteDatabase,
   category: AdSaveCategory,
   onFinish: () => void
 ): Promise<void> {
   const operation = saveQueue.then(async () => {
-    const counterKey = AD_COUNTER_KEYS[category];
-    const stored = Number(await getSetting(db, counterKey, '0'));
-    const currentCount = Number.isSafeInteger(stored) && stored >= 0 ? stored : 0;
+    console.info(`[AdMob] New ${category} record: attempting interstitial`);
     await processAdSave(
-      currentCount,
       () => new Promise<boolean>(resolve => { showInterstitialIfAvailable(resolve); }),
-      nextCount => setSetting(db, counterKey, String(nextCount)),
     );
   });
   // A failure must not poison subsequent saves.
@@ -171,7 +153,7 @@ export async function handleSavedWithAd(
   try {
     await operation;
   } catch (error) {
-    console.warn('[AdMob] Gagal memproses counter iklan:', error);
+    console.warn('[AdMob] Gagal menampilkan iklan setelah simpan:', error);
   } finally {
     onFinish();
   }

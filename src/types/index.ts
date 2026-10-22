@@ -86,8 +86,9 @@ export interface Investment {
   id: string;
   instrument_type: InvestmentInstrument;
   asset_name: string;       // e.g. BBCA, BTC/USDT, EUR/USD, Emas Antam
-  buy_price: number;        // Modal / Nilai Beli
-  sell_price: number;       // Nilai Jual / Penutupan
+  capital?: number | null; // Invested amount; null for legacy total-buy/total-sell records
+  buy_price: number;        // Unit buy price when capital is set; total cost for legacy records
+  sell_price: number;       // Unit sell price when capital is set; total proceeds for legacy records
   pnl: number;              // Profit atau Loss nominal (sell - buy)
   pnl_percentage: number;   // ((sell - buy) / buy) * 100
   trade_date: string;       // YYYY-MM-DD

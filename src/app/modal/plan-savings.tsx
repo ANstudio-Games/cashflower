@@ -1,5 +1,6 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,7 +56,7 @@ export default function PlanSavings() {
       })}
       {plan?.is_completed === 0 && <>
         <Text style={{ color: colors.text }}>{t('allocation_amount')}</Text>
-        <TextInput accessibilityLabel={t('allocation_amount')} value={amount} onChangeText={setAmount} editable={!isSaving} keyboardType="number-pad" style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }} />
+        <NumberInput accessibilityLabel={t('allocation_amount')} value={amount} onChangeText={setAmount} editable={!isSaving} keyboardType="number-pad" style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, color: colors.text }} />
         {[false, true].map(withdraw => <Pressable key={String(withdraw)} disabled={isSaving || !loaded || failed || !walletId} accessibilityRole="button" onPress={() => submit(withdraw)} style={{ minHeight: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 14, backgroundColor: colors.primaryDark, opacity: isSaving || !walletId ? 0.6 : 1 }}>
           <Text style={{ color: colors.surface, fontWeight: '600' }}>{isSaving ? t('safety_saving') : t(withdraw ? 'allocation_withdraw' : 'allocation_deposit')}</Text>
         </Pressable>)}

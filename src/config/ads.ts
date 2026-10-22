@@ -9,28 +9,7 @@ export const AD_CONFIG = {
   },
 };
 
-// Counter terpisah; transaksi lama tetap memakai key yang sama.
-export const AD_COUNTER_KEYS = {
-  transaction: 'ad_tx_save_count',
-  debt: 'ad_debt_save_count',
-  trading: 'ad_trading_save_count',
-} as const;
-
-export type AdSaveCategory = keyof typeof AD_COUNTER_KEYS;
-
-/**
- * Aturan kemunculan iklan:
- * - Transaksi #1 (pertama kali): Muncul iklan
- * - Transaksi #2 & #3: Jeda (2x transaksi)
- * - Transaksi #4: Muncul iklan
- * - Transaksi #5 & #6: Jeda
- * - Transaksi #7: Muncul iklan
- */
-export function shouldShowAd(saveCount: number): boolean {
-  if (saveCount <= 0) return false;
-  if (saveCount === 1) return true;
-  return (saveCount - 1) % 3 === 0;
-}
+export type AdSaveCategory = 'transaction' | 'debt' | 'trading';
 
 export function getAdUnitId(type: 'interstitial' = 'interstitial', isProd?: boolean): string {
   const isProduction =

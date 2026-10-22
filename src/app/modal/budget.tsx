@@ -1,9 +1,9 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+import { formatCurrency } from '@/utils/format-currency';
 import { useI18n } from '@/i18n';
 import { useSaveAction } from '@/utils/use-save-action';
 
@@ -31,11 +31,6 @@ export default function BudgetModal() {
   const [selectedCategory, setSelectedCategory] = useState<string>('global'); // 'global' or categoryId
   const [rawLimit, setRawLimit] = useState('');
 
-  const handleLimitChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawLimit, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawLimit(nextRaw);
-  };
 
   const globalBudget = budgets.find((b) => b.category_id === null);
 
@@ -140,13 +135,13 @@ export default function BudgetModal() {
           {/* Limit Input */}
           <View style={styles.amountInputRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
-            <TextInput
+            <NumberInput
               style={styles.amountInput}
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={formatNumberInput(rawLimit, language)}
-              onChangeText={handleLimitChange}
+              value={rawLimit}
+              onChangeText={setRawLimit}
             />
           </View>
 

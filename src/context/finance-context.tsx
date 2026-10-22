@@ -57,6 +57,7 @@ import { backupToGoogleDriveOrShare, restoreFromBackupFile } from '@/utils/backu
 import { reconcileReminders, cancelDebtReminder } from '@/utils/notifications';
 import { REMINDER_KEYS, ReminderStatus } from '@/utils/reminder-policy';
 import { useI18n } from '@/i18n';
+import { calculateInvestmentReturn } from '@/utils/investment-return';
 
 interface FinanceContextType {
   isLoading: boolean;
@@ -385,8 +386,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createInvestment = async (item: Omit<Investment, 'id' | 'created_at' | 'pnl' | 'pnl_percentage'>) => {
-    const pnl = item.sell_price - item.buy_price;
-    const pnl_percentage = item.buy_price > 0 ? (pnl / item.buy_price) * 100 : 0;
+    if (item.capital == null) throw new RangeError('Investment capital is required');
+    const { pnl, pnlPercentage: pnl_percentage } = calculateInvestmentReturn(item.capital, item.buy_price, item.sell_price);
     const newInv: Investment = {
       ...item,
       id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),

@@ -1,3 +1,4 @@
+import { NumberInput } from '@/components/number-input';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -19,7 +20,7 @@ import { useFinance } from '@/context/finance-context';
 import { useI18n } from '@/i18n';
 import { useSaveAction } from '@/utils/use-save-action';
 import { colors, shadowStyles } from '@/theme/colors';
-import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+import { formatCurrency } from '@/utils/format-currency';
 
 export default function AddPlanModal() {
   const router = useRouter();
@@ -59,11 +60,6 @@ export default function AddPlanModal() {
     }
   }, [params.id, plans]);
 
-  const handleAmountChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawAmount, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawAmount(nextRaw);
-  };
 
   const parsedAmount = parseInt(rawAmount, 10) || 0;
   const currentBalance = Math.max(0, plans.find(plan => plan.id === params.id)?.allocated_amount || 0);
@@ -141,13 +137,13 @@ export default function AddPlanModal() {
             <Text style={styles.amountLabel}>{t('plan_modal_amount_label')}</Text>
             <View style={styles.amountInputRow}>
               <Text style={styles.currencyPrefix}>Rp</Text>
-              <TextInput
+              <NumberInput
                 style={styles.amountInput}
                 placeholder="0"
                 placeholderTextColor="#CBD5E1"
                 keyboardType="number-pad"
-                value={formatNumberInput(rawAmount, language)}
-                onChangeText={handleAmountChange}
+                value={rawAmount}
+                onChangeText={setRawAmount}
                 autoFocus={!isEditing}
               />
             </View>

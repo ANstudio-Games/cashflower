@@ -1,3 +1,5 @@
+import { DateField } from '@/components/date-field';
+import { NumberInput } from '@/components/number-input';
 import React, { useState } from 'react';
 import {
   View,
@@ -16,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+
 import { getTodayISO } from '@/utils/format-date';
 import { DebtType } from '@/types';
 import { useI18n } from '@/i18n';
@@ -41,11 +43,6 @@ export default function AddDebtModal() {
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
 
-  const handleAmountChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawAmount, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawAmount(nextRaw);
-  };
 
   const handleSave = async () => {
     if (!isValidISODate(issueDate) || (dueDate !== '' && (!isValidISODate(dueDate) || dueDate < issueDate))) {
@@ -129,13 +126,13 @@ export default function AddDebtModal() {
           <Text style={styles.inputLabel}>{t('debt_modal_amount_label')}</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencyPrefix}>Rp</Text>
-            <TextInput
+            <NumberInput
               style={styles.amountInput}
               keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={formatNumberInput(rawAmount, language)}
-              onChangeText={handleAmountChange}
+              value={rawAmount}
+              onChangeText={setRawAmount}
               autoFocus
             />
           </View>
@@ -162,12 +159,10 @@ export default function AddDebtModal() {
         {/* Dates */}
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>{t('debt_modal_issue_date')}</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textMuted}
+          <DateField
             value={issueDate}
-            onChangeText={setIssueDate}
+            onChange={setIssueDate}
+            label={t('debt_modal_issue_date')}
           />
         </View>
 
@@ -175,12 +170,10 @@ export default function AddDebtModal() {
           <Text style={styles.sectionTitle}>
             {t('debt_modal_due_date')}
           </Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder={t('debt_modal_due_placeholder')}
-            placeholderTextColor={colors.textMuted}
+          <DateField
             value={dueDate}
-            onChangeText={setDueDate}
+            onChange={setDueDate}
+            label={t('debt_modal_due_date')}
           />
         </View>
 

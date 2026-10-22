@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import { View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SQLiteProvider } from 'expo-sqlite';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DB_NAME, initDatabase } from '@/db';
+import { initDemoDatabase } from '@/db/demo';
 import { I18nProvider } from '@/i18n';
 import { FinanceProvider } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
@@ -11,13 +13,18 @@ import { initializeAds } from '@/services/ad-service';
 import { FinanceDataGate } from '@/components/finance-data-gate';
 
 export default function RootLayout() {
+  const isDemo = process.env.EXPO_OS === 'web' && typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('demo') === '1';
   useEffect(() => {
     initializeAds();
   }, []);
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <SQLiteProvider databaseName={DB_NAME} onInit={initDatabase}>
+      {isDemo && <View style={{ backgroundColor: colors.primaryLight, padding: 8, alignItems: 'center' }}>
+        <Text style={{ color: colors.primaryDark, fontSize: 12 }}>DEMO · Data dummy, terpisah dari data asli</Text>
+      </View>}
+      <SQLiteProvider databaseName={isDemo ? 'cashflower-demo.db' : DB_NAME} onInit={isDemo ? initDemoDatabase : initDatabase}>
         <I18nProvider>
           <FinanceProvider>
             <FinanceDataGate>

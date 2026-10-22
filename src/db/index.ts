@@ -195,6 +195,12 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     console.warn('Migration check warning:', migErr);
   }
 
+  // Null capital preserves the original total-buy/total-sell meaning of old records.
+  const investmentColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(investments)');
+  if (!investmentColumns.some(column => column.name === 'capital')) {
+    await db.execAsync('ALTER TABLE investments ADD COLUMN capital REAL;');
+  }
+
   await db.execAsync(ALLOCATION_GUARDS_SQL);
 
   // Insert default wallets if not already populated
@@ -858,9 +864,9 @@ export async function getInvestments(
 
 export async function addInvestment(db: SQLite.SQLiteDatabase, item: Investment): Promise<void> {
   await db.runAsync(
-    `INSERT INTO investments (id, instrument_type, asset_name, buy_price, sell_price, pnl, pnl_percentage, trade_date, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [item.id, item.instrument_type, item.asset_name, item.buy_price, item.sell_price, item.pnl, item.pnl_percentage, item.trade_date, item.notes ?? null, item.created_at]
+    `INSERT INTO investments (id, instrument_type, asset_name, buy_price, sell_price, pnl, pnl_percentage, trade_date, notes, created_at, capital)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [item.id, item.instrument_type, item.asset_name, item.buy_price, item.sell_price, item.pnl, item.pnl_percentage, item.trade_date, item.notes ?? null, item.created_at, item.capital ?? null]
   );
 }
 
@@ -877,7 +883,7 @@ export async function getInvestmentSummary(db: SQLite.SQLiteDatabase): Promise<I
     totalTrades: number;
   }>(`
     SELECT 
-      COALESCE(SUM(buy_price), 0) as totalCapital,
+      COALESCE(SUM(COALESCE(capital, buy_price)), 0) as totalCapital,
       COALESCE(SUM(pnl), 0) as totalPnl,
       COUNT(CASE WHEN pnl > 0 THEN 1 END) as winCount,
       COUNT(CASE WHEN pnl < 0 THEN 1 END) as lossCount,
@@ -1203,9 +1209,9 @@ export async function importAllData(db: SQLite.SQLiteDatabase, backup: BackupDat
     if (Array.isArray(backup.investments)) {
       for (const inv of backup.investments) {
         await db.runAsync(
-          `INSERT INTO investments (id, instrument_type, asset_name, buy_price, sell_price, pnl, pnl_percentage, trade_date, notes, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [inv.id, inv.instrument_type, inv.asset_name, inv.buy_price, inv.sell_price, inv.pnl, inv.pnl_percentage, inv.trade_date, inv.notes ?? null, inv.created_at || Date.now()]
+          `INSERT INTO investments (id, instrument_type, asset_name, buy_price, sell_price, pnl, pnl_percentage, trade_date, notes, created_at, capital)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [inv.id, inv.instrument_type, inv.asset_name, inv.buy_price, inv.sell_price, inv.pnl, inv.pnl_percentage, inv.trade_date, inv.notes ?? null, inv.created_at || Date.now(), inv.capital ?? null]
         );
       }
     }
