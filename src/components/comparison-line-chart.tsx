@@ -128,7 +128,16 @@ export function ComparisonLineChart({ transactions }: { transactions: Transactio
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, gap: 12, borderWidth: 1, borderColor: colors.border },
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginHorizontal: 16,
+    marginVertical: 8,
+  },
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   chip: { minWidth: 48, minHeight: 48, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
   active: { backgroundColor: colors.primaryLight },
