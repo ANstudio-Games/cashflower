@@ -9,9 +9,10 @@ import { useI18n } from '@/i18n';
 interface InvestmentItemProps {
   item: Investment;
   onDelete: (id: string) => void;
+  onEdit: (item: Investment) => void;
 }
 
-export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
+export function InvestmentItem({ item, onDelete, onEdit }: InvestmentItemProps) {
   const isProfit = item.pnl >= 0;
   const { t, language, formatDateShort } = useI18n();
 
@@ -38,7 +39,11 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
   };
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('a11y_edit', { name: item.asset_name })}
+      onPress={() => onEdit(item)}
+      style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}>
       <View style={styles.headerRow}>
         {/* Instrument Badge */}
         <View style={[styles.badge, { backgroundColor: `${instrument.color}15` }]}>
@@ -98,12 +103,12 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('a11y_delete', { name: item.asset_name })}
-          onPress={handleDelete}
+          onPress={(event) => { event.stopPropagation(); handleDelete(); }}
           style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.6 }]}>
           <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
         </Pressable>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

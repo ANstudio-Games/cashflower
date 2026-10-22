@@ -307,6 +307,7 @@ export const id: TranslationDictionary = {
   inv_capital_label: 'Modal: ',
   inv_legacy_buy: 'Total beli: ',
   inv_legacy_sell: 'Total jual: ',
+  inv_modal_edit_title: 'Edit Investasi',
   inv_modal_title: 'Catat Trading / Investasi',
   inv_modal_select_inst: 'Pilih Instrumen',
   inv_modal_asset_name: 'Nama Aset / Pair',
