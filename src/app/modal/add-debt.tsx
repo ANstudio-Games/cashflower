@@ -1,3 +1,4 @@
+import { DateField } from '@/components/date-field';
 import { NumberInput } from '@/components/number-input';
 import React, { useState } from 'react';
 import {
@@ -158,12 +159,10 @@ export default function AddDebtModal() {
         {/* Dates */}
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>{t('debt_modal_issue_date')}</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textMuted}
+          <DateField
             value={issueDate}
-            onChangeText={setIssueDate}
+            onChange={setIssueDate}
+            label={t('debt_modal_issue_date')}
           />
         </View>
 
@@ -171,12 +170,10 @@ export default function AddDebtModal() {
           <Text style={styles.sectionTitle}>
             {t('debt_modal_due_date')}
           </Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder={t('debt_modal_due_placeholder')}
-            placeholderTextColor={colors.textMuted}
+          <DateField
             value={dueDate}
-            onChangeText={setDueDate}
+            onChange={setDueDate}
+            label={t('debt_modal_due_date')}
           />
         </View>
 

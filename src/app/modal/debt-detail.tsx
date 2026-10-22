@@ -1,3 +1,4 @@
+import { DateField } from '@/components/date-field';
 import { NumberInput } from '@/components/number-input';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -496,12 +497,10 @@ export default function DebtDetailModal() {
             <View style={styles.formInputGroup}>
               <Text style={styles.formLabel}>{t('debt_detail_date_label')}</Text>
               <View style={styles.dateRow}>
-                <TextInput
-                  style={[styles.textInput, { flex: 1 }]}
+                <DateField
                   value={paymentDate}
-                  onChangeText={setPaymentDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textMuted}
+                  onChange={setPaymentDate}
+                  label={t('debt_detail_date_label')}
                 />
                 <Pressable
                   style={styles.todayBtn}

@@ -1,3 +1,4 @@
+import { DateField } from '@/components/date-field';
 import { NumberInput } from '@/components/number-input';
 import React, { useState } from 'react';
 import {
@@ -237,12 +238,10 @@ export default function AddInvestmentModal() {
         {/* Trade Date */}
         <View style={styles.inputSection}>
           <Text style={styles.sectionTitle}>{t('inv_modal_trade_date')}</Text>
-          <TextInput
-            style={styles.textInput}
+          <DateField
             value={tradeDate}
-            onChangeText={setTradeDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textMuted}
+            onChange={setTradeDate}
+            label={t('inv_modal_trade_date')}
           />
         </View>
 
