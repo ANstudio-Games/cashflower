@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useSQLiteContext } from 'expo-sqlite';
+import { handleSavedWithAd } from '@/services/ad-service';
 import { colors } from '@/theme/colors';
 import { useI18n } from '@/i18n';
 import { useSaveAction } from '@/utils/use-save-action';
@@ -52,6 +54,7 @@ const AVAILABLE_COLORS = [
 
 export default function AddCategoryModal() {
   const router = useRouter();
+  const db = useSQLiteContext();
   const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
@@ -76,7 +79,7 @@ export default function AddCategoryModal() {
         icon: selectedIcon,
         color: selectedColor,
       });
-      router.back();
+      await handleSavedWithAd(db, 'category', () => router.back());
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), t('cat_err_save'));

@@ -17,6 +17,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
+import { useSQLiteContext } from 'expo-sqlite';
+import { handleSavedWithAd } from '@/services/ad-service';
 import { colors } from '@/theme/colors';
 
 import { WalletType } from '@/types';
@@ -61,6 +63,7 @@ const AVAILABLE_COLORS = [
 
 export default function AddWalletModal() {
   const router = useRouter();
+  const db = useSQLiteContext();
   const { isSaving, runSave } = useSaveAction();
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
@@ -148,7 +151,11 @@ export default function AddWalletModal() {
           is_default: isDefault ? 1 : 0,
         });
       }
-      router.back();
+      if (isEditing) {
+        router.back();
+      } else {
+        await handleSavedWithAd(db, 'wallet', () => router.back());
+      }
     } catch (err: any) {
       console.error(err);
       Alert.alert(t('common_error'), isEditing ? t('wallet_modal_err_update') : t('wallet_modal_err_save'));
