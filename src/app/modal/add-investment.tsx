@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
 import { colors } from '@/theme/colors';
-import { formatCurrency, formatNumberInput, parseCurrencyInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
+import { formatCurrency, formatNumberInput, parseCurrencyWithBackspace } from '@/utils/format-currency';
 import { getTodayISO } from '@/utils/format-date';
 import { InvestmentInstrument } from '@/types';
 import { useI18n } from '@/i18n';
@@ -24,6 +24,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { handleSavedWithAd } from '@/services/ad-service';
 import { useSaveAction } from '@/utils/use-save-action';
 import { isValidISODate } from '@/utils/validate-date';
+import { calculateInvestmentReturn } from '@/utils/investment-return';
 
 export default function AddInvestmentModal() {
   const router = useRouter();
@@ -45,27 +46,25 @@ export default function AddInvestmentModal() {
 
   const [instrument, setInstrument] = useState<InvestmentInstrument>('saham');
   const [assetName, setAssetName] = useState('');
+  const [rawCapital, setRawCapital] = useState('');
   const [rawBuy, setRawBuy] = useState('');
   const [rawSell, setRawSell] = useState('');
   const [tradeDate, setTradeDate] = useState(getTodayISO());
   const [notes, setNotes] = useState('');
 
-  const handleBuyChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawBuy, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawBuy(nextRaw);
+  const handlePriceChange = (text: string, setValue: (value: string) => void) => {
+    // No grouping separators: accept either decimal separator from mobile keyboards.
+    if (/^\d*([.,]\d*)?$/.test(text)) setValue(text);
   };
-
-  const handleSellChange = (text: string) => {
-    const currentFormatted = formatNumberInput(rawSell, language);
-    const nextRaw = parseCurrencyWithBackspace(text, currentFormatted);
-    setRawSell(nextRaw);
-  };
-
-  const buyPrice = rawBuy ? parseInt(rawBuy, 10) : 0;
-  const sellPrice = rawSell ? parseInt(rawSell, 10) : 0;
-  const pnl = sellPrice - buyPrice;
-  const pnlPercentage = buyPrice > 0 ? (pnl / buyPrice) * 100 : 0;
+  const capital = Number(rawCapital);
+  const buyPrice = Number(rawBuy.replace(',', '.'));
+  const sellPrice = Number(rawSell.replace(',', '.'));
+  let result: ReturnType<typeof calculateInvestmentReturn> | null = null;
+  if (rawCapital && rawBuy && rawSell) {
+    try { result = calculateInvestmentReturn(capital, buyPrice, sellPrice); } catch { /* Incomplete or invalid input. */ }
+  }
+  const pnl = result?.pnl ?? 0;
+  const pnlPercentage = result?.pnlPercentage ?? 0;
   const isProfit = pnl >= 0;
 
   const handleSave = async () => {
@@ -81,7 +80,11 @@ export default function AddInvestmentModal() {
       Alert.alert(t('common_attention'), t('inv_modal_err_asset'));
       return;
     }
-    if (buyPrice <= 0) {
+    if (!Number.isFinite(capital) || capital <= 0) {
+      Alert.alert(t('common_attention'), t('inv_modal_err_capital'));
+      return;
+    }
+    if (!result) {
       Alert.alert(t('common_attention'), t('inv_modal_err_buy'));
       return;
     }
@@ -90,6 +93,7 @@ export default function AddInvestmentModal() {
       await createInvestment({
         instrument_type: instrument,
         asset_name: assetName.trim().toUpperCase(),
+        capital,
         buy_price: buyPrice,
         sell_price: sellPrice,
         trade_date: tradeDate,
@@ -152,17 +156,31 @@ export default function AddInvestmentModal() {
           />
         </View>
 
+        <View style={styles.inputSection}>
+          <Text style={styles.sectionTitle}>{t('inv_modal_capital')}</Text>
+          <TextInput
+            accessibilityLabel={t('inv_modal_capital')}
+            style={styles.textInput}
+            keyboardType="number-pad"
+            placeholder="0"
+            placeholderTextColor={colors.textMuted}
+            value={formatNumberInput(rawCapital, language)}
+            onChangeText={text => setRawCapital(parseCurrencyWithBackspace(text, formatNumberInput(rawCapital, language)))}
+          />
+        </View>
+        <Text style={styles.inputHelp}>{t('inv_modal_price_help')}</Text>
         {/* Prices Row */}
         <View style={styles.pricesRow}>
           <View style={[styles.inputSection, { flex: 1 }]}>
             <Text style={styles.sectionTitle}>{t('inv_modal_buy_price')}</Text>
             <TextInput
               style={styles.textInput}
-              keyboardType="number-pad"
+              accessibilityLabel={t('inv_modal_buy_price')}
+              keyboardType="decimal-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={formatNumberInput(rawBuy, language)}
-              onChangeText={handleBuyChange}
+              value={rawBuy}
+              onChangeText={text => handlePriceChange(text, setRawBuy)}
             />
           </View>
 
@@ -170,22 +188,25 @@ export default function AddInvestmentModal() {
             <Text style={styles.sectionTitle}>{t('inv_modal_sell_price')}</Text>
             <TextInput
               style={styles.textInput}
-              keyboardType="number-pad"
+              accessibilityLabel={t('inv_modal_sell_price')}
+              keyboardType="decimal-pad"
               placeholder="0"
               placeholderTextColor={colors.textMuted}
-              value={formatNumberInput(rawSell, language)}
-              onChangeText={handleSellChange}
+              value={rawSell}
+              onChangeText={text => handlePriceChange(text, setRawSell)}
             />
           </View>
         </View>
 
         {/* Live PnL Preview Card */}
-        {buyPrice > 0 && sellPrice > 0 ? (
+        {result ? (
           <View
             style={[
               styles.pnlCard,
               { backgroundColor: isProfit ? colors.incomeSoft : colors.expenseSoft },
             ]}>
+            <Text selectable style={styles.inputHelp}>{t('inv_units')}: {result.units.toLocaleString(language, { maximumFractionDigits: 8 })}</Text>
+            <Text selectable style={styles.inputHelp}>{t('inv_final_value')}: {formatCurrency(result.finalValue, language)}</Text>
             <View style={styles.pnlRow}>
               <View>
                 <Text style={styles.pnlLabel}>{isProfit ? t('inv_modal_profit') : t('inv_modal_loss')}</Text>
@@ -336,9 +357,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
+  inputHelp: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
   pricesRow: {
-    flexDirection: 'row',
-    gap: 12,
+    gap: 0,
   },
   pnlCard: {
     borderRadius: 14,

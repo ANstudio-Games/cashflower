@@ -73,17 +73,22 @@ export function InvestmentItem({ item, onDelete }: InvestmentItemProps) {
         </View>
 
         <View style={styles.priceCol}>
+          {item.capital != null && <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>{t('inv_capital_label')}</Text>
+            <Text style={styles.priceValue}>{formatCurrency(item.capital, language)}</Text>
+          </View>}
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>{t('inv_buy_label')}</Text>
-            <Text style={styles.priceValue}>{formatCurrency(item.buy_price, language)}</Text>
+            <Text style={styles.priceLabel}>{t(item.capital == null ? 'inv_legacy_buy' : 'inv_buy_label')}</Text>
+            <Text style={styles.priceValue}>{item.capital == null ? formatCurrency(item.buy_price, language) : item.buy_price.toLocaleString(language, { maximumFractionDigits: 8 }) + ' Rp'}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>{t('inv_sell_label')}</Text>
-            <Text style={styles.priceValue}>{formatCurrency(item.sell_price, language)}</Text>
+            <Text style={styles.priceLabel}>{t(item.capital == null ? 'inv_legacy_sell' : 'inv_sell_label')}</Text>
+            <Text style={styles.priceValue}>{item.capital == null ? formatCurrency(item.sell_price, language) : item.sell_price.toLocaleString(language, { maximumFractionDigits: 8 }) + ' Rp'}</Text>
           </View>
         </View>
       </View>
 
+      {item.capital == null && <Text style={styles.date}>{t('inv_legacy')}</Text>}
       {/* Footer Notes & Delete */}
       <View style={styles.footerRow}>
         <Text style={styles.notes} numberOfLines={1}>
