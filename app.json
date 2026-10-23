@@ -2,7 +2,7 @@
   "expo": {
     "name": "Cashflower",
     "slug": "cashflower",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "cashflower",
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.cashflower.app",
       "permissions": ["android.permission.REQUEST_INSTALL_PACKAGES"],
-      "versionCode": 13,
+      "versionCode": 14,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

@@ -18,9 +18,11 @@ export function parseRelease(data: any, installed: string): AppRelease | null {
   if (data.draft || data.prerelease || !isNewerVersion(data.tag_name, installed)) return null;
   const version = data.tag_name.replace(/^v/, '');
   const asset = data.assets?.find((item: any) => item.name === `cashflower-${version}.apk`);
-  const prefix = `${RELEASES_URL}/download/${data.tag_name}/`;
+  // GitHub canonicalizes owner/repository casing; release tags remain case-sensitive.
   if (!asset || typeof asset.browser_download_url !== 'string' ||
-      !asset.browser_download_url.startsWith(prefix) || !Number.isSafeInteger(asset.size) || asset.size <= 0) {
+      asset.browser_download_url.slice(0, RELEASES_URL.length).toLowerCase() !== RELEASES_URL.toLowerCase() ||
+      !asset.browser_download_url.slice(RELEASES_URL.length).startsWith(`/download/${data.tag_name}/`) ||
+      !Number.isSafeInteger(asset.size) || asset.size <= 0) {
     throw new Error('Release has no supported APK');
   }
   return { version, url: asset.browser_download_url, size: asset.size };

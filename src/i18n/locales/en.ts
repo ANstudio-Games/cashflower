@@ -9,7 +9,7 @@ export const en: TranslationDictionary = {
   update_current: 'Installed: {version}',
   update_new: 'Available: {version}',
   update_latest: 'You are using the latest released version.',
-  update_error: 'Update failed. Check your connection and try again. The release must be public.',
+  update_error: 'Update failed. Try again. The release server, APK file, or installation may have a problem; your internet connection is not always the cause.',
   update_permission: 'Android will ask you to approve installation. If prompted, allow installs from Cashflower, then tap here again to retry. Do not uninstall the app.',
   clarity_reset_filters: "Reset search & filters",
   clarity_debts_first: "No debts or receivables recorded yet. Add your first loan to track payments.",
