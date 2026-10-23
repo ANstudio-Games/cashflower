@@ -9,7 +9,7 @@ export const id: TranslationDictionary = {
   update_current: 'Terpasang: {version}',
   update_new: 'Tersedia: {version}',
   update_latest: 'Kamu memakai versi rilis terbaru.',
-  update_error: 'Pembaruan gagal. Periksa koneksi lalu coba lagi. Release harus dapat diakses publik.',
+  update_error: 'Pembaruan gagal. Coba lagi. Server rilis, file APK, atau pemasangan mungkin bermasalah; bukan selalu koneksi internet.',
   update_permission: 'Android akan meminta konfirmasi pemasangan. Jika diminta, izinkan pemasangan dari Cashflower lalu ketuk di sini lagi. Jangan hapus aplikasi.',
   clarity_reset_filters: "Reset pencarian & filter",
   clarity_debts_first: "Belum ada catatan hutang atau piutang. Catat pinjaman pertama untuk mulai memantau pembayaran.",

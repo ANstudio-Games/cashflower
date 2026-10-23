@@ -9,7 +9,7 @@ export const zh: TranslationDictionary = {
   update_current: '已安装：{version}',
   update_new: '可用版本：{version}',
   update_latest: '当前已是最新发布版本。',
-  update_error: '更新失败。请检查网络后重试。发布版本必须可公开访问。',
+  update_error: '更新失败，请重试。可能是发布服务器、APK 文件或安装出现问题，不一定是网络连接问题。',
   update_permission: 'Android 会要求确认安装。如有提示，请允许 Cashflower 安装应用，然后再次点击重试。请勿卸载应用。',
   clarity_reset_filters: "重置搜索和筛选",
   clarity_debts_first: "尚未记录借款或应收款。添加第一笔借款以跟踪还款。",
