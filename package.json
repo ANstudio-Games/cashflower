@@ -3,7 +3,7 @@
   "private": true,
   "license": "UNLICENSED",
   "main": "expo-router/entry",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "dependencies": {
     "@expo/ui": "~57.0.26",
     "@expo/vector-icons": "^15.1.1",
