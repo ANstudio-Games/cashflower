@@ -1,6 +1,6 @@
 import { DateField } from '@/components/date-field';
 import { NumberInput } from '@/components/number-input';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/finance-context';
@@ -34,10 +34,10 @@ export default function AddInvestmentModal() {
   const insets = useSafeAreaInsets();
   const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 16) + 10;
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { investments, createInvestment, editInvestment } = useFinance();
-  const existing = investments.find(item => item.id === id);
   const isEditing = !!id;
-  const isLegacy = !!existing && existing.capital == null;
+  const { investments, createInvestment, editInvestment } = useFinance();
+  const existing = investments.find(investment => investment.id === id);
+  const isLegacy = isEditing && existing != null && existing.capital == null;
   const db = useSQLiteContext();
   const { t, language } = useI18n();
 
@@ -85,6 +85,10 @@ export default function AddInvestmentModal() {
   const isProfit = pnl >= 0;
 
   const handleSave = async () => {
+    if (isEditing && !existing) {
+      Alert.alert(t('common_error'), t('inv_modal_not_found'));
+      return;
+    }
     if (!isValidISODate(tradeDate)) {
       Alert.alert(t('common_attention'), t('safety_invalid_date'));
       return;
@@ -107,7 +111,6 @@ export default function AddInvestmentModal() {
     }
 
     try {
-      if (isEditing && !existing) throw new Error('Investment not found');
       const values = {
         instrument_type: instrument,
         asset_name: assetName.trim().toUpperCase(),
@@ -117,8 +120,8 @@ export default function AddInvestmentModal() {
         trade_date: tradeDate,
         notes: notes.trim() || null,
       };
-      if (existing) {
-        await editInvestment({ ...existing, ...values });
+      if (isEditing && id) {
+        await editInvestment({ ...values, id });
         router.back();
       } else {
         await createInvestment(values);
@@ -144,6 +147,7 @@ export default function AddInvestmentModal() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {isEditing && !existing && <Text accessibilityRole="alert" style={styles.inputHelp}>{t('inv_modal_not_found')}</Text>}
         {/* Instrument Selector */}
         <Text style={styles.sectionTitle}>{t('inv_modal_select_inst')}</Text>
         <View style={styles.instrumentsRow}>
@@ -229,7 +233,7 @@ export default function AddInvestmentModal() {
               styles.pnlCard,
               { backgroundColor: isProfit ? colors.incomeSoft : colors.expenseSoft },
             ]}>
-            <Text selectable style={styles.inputHelp}>{t('inv_units')}: {result.units.toLocaleString(language, { maximumFractionDigits: 8 })}</Text>
+            {!isLegacy && <Text selectable style={styles.inputHelp}>{t('inv_units')}: {result.units.toLocaleString(language, { maximumFractionDigits: 8 })}</Text>}
             <Text selectable style={styles.inputHelp}>{t('inv_final_value')}: {formatCurrency(result.finalValue, language)}</Text>
             <View style={styles.pnlRow}>
               <View>
@@ -284,9 +288,9 @@ export default function AddInvestmentModal() {
         {/* Submit */}
         <Pressable
           style={({ pressed }) => [styles.submitBtn, isSaving && { opacity: 0.65 }, pressed && { opacity: 0.85 }]}
-          disabled={isSaving}
+          disabled={isSaving || (isEditing && !existing)}
           accessibilityRole="button"
-          accessibilityState={{ busy: isSaving, disabled: isSaving }}
+          accessibilityState={{ busy: isSaving, disabled: isSaving || (isEditing && !existing) }}
           onPress={() => { void runSave(handleSave); }}>
           {isSaving ? <Text style={styles.submitBtnText}>{t('safety_saving')}</Text> : (<>
           <Ionicons name="checkmark" size={20} color="#FFFFFF" />
