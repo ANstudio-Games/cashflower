@@ -151,11 +151,7 @@ export default function AddWalletModal() {
           is_default: isDefault ? 1 : 0,
         });
       }
-      if (isEditing) {
-        router.back();
-      } else {
-        await handleSavedWithAd(db, 'wallet', () => router.back());
-      }
+      await handleSavedWithAd(db, 'wallet', () => router.back());
     } catch (err: any) {
       console.error(err);
       Alert.alert(t('common_error'), isEditing ? t('wallet_modal_err_update') : t('wallet_modal_err_save'));
