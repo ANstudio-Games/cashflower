@@ -128,7 +128,6 @@ export default function AddTransactionModal() {
           notes: notes.trim() || null,
           created_at: existingCreatedAt,
         });
-        router.back();
       } else {
         await createTransaction({
           title: title.trim(),
@@ -140,10 +139,10 @@ export default function AddTransactionModal() {
           date,
           notes: notes.trim() || null,
         });
-        await handleTransactionSavedWithAd(db, () => {
-          router.back();
-        });
       }
+      await handleTransactionSavedWithAd(db, () => {
+        router.back();
+      });
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), String(err).includes('allocation_') ? t('allocation_spend_blocked') : isEditing ? t('tx_modal_err_update') : t('tx_modal_err_save'));

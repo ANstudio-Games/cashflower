@@ -122,11 +122,10 @@ export default function AddInvestmentModal() {
       };
       if (isEditing && id) {
         await editInvestment({ ...values, id });
-        router.back();
       } else {
         await createInvestment(values);
-        await handleSavedWithAd(db, 'trading', () => router.back());
       }
+      await handleSavedWithAd(db, 'trading', () => router.back());
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), t('inv_modal_err_save'));

@@ -128,7 +128,7 @@ export function showInterstitialIfAvailable(onClose?: (displayed: boolean) => vo
   }
 }
 
-/** Attempt an interstitial after each newly saved transaction. */
+/** Attempt an interstitial after each created or edited transaction. */
 export function handleTransactionSavedWithAd(
   db: SQLite.SQLiteDatabase,
   onFinish: () => void
@@ -136,14 +136,14 @@ export function handleTransactionSavedWithAd(
   return handleSavedWithAd(db, 'transaction', onFinish);
 }
 
-/** Serialize shared SDK access. Every category attempts an ad on every new save. */
+/** Serialize shared SDK access. Every category attempts an ad on every successful save. */
 export async function handleSavedWithAd(
   _db: SQLite.SQLiteDatabase,
   category: AdSaveCategory,
   onFinish: () => void
 ): Promise<void> {
   const operation = saveQueue.then(async () => {
-    console.info(`[AdMob] New ${category} record: attempting interstitial`);
+    console.info(`[AdMob] Saved ${category} record: attempting interstitial`);
     await processAdSave(
       () => new Promise<boolean>(resolve => { showInterstitialIfAvailable(resolve); }),
     );

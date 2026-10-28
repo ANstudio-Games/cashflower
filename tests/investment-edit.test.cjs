@@ -105,7 +105,7 @@ function form(h) {
   return { render, input, save };
 }
 
-test('editor pre-fills every field and updates the selected record without creating a duplicate or showing an ad', async () => {
+test('editor pre-fills every field and updates the selected record without creating a duplicate, then shows an ad', async () => {
   const h = harness({ id: item.id });
   const f = form(h);
   assert.equal(f.input('inv_modal_capital').props.value, '1000000');
@@ -122,7 +122,7 @@ test('editor pre-fills every field and updates the selected record without creat
     trade_date: item.trade_date, notes: item.notes,
   }]);
   assert.equal(h.calls.creates.length, 0);
-  assert.equal(h.calls.ads, 0);
+  assert.equal(h.calls.ads, 1);
   assert.equal(h.calls.backs, 1);
 });
 

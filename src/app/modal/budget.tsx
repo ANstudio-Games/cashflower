@@ -54,11 +54,7 @@ export default function BudgetModal() {
       });
       setRawLimit('');
       const onFinish = () => Alert.alert(t('common_success'), t('budget_saved_success'));
-      if (budgets.some(budget => budget.id === id)) {
-        onFinish();
-      } else {
-        await handleSavedWithAd(db, 'budget', onFinish);
-      }
+      await handleSavedWithAd(db, 'budget', onFinish);
     } catch (err) {
       console.error(err);
       Alert.alert(t('common_error'), t('budget_err_limit'));

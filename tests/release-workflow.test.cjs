@@ -3,6 +3,19 @@ const assert = require('node:assert/strict');
 const { configureAndroid } = require('../scripts/configure-ci-android.cjs');
 const { readFileSync } = require('node:fs');
 
+test('2.1.0 release versions are synchronized with Android build 15', () => {
+  const app = JSON.parse(readFileSync('app.json', 'utf8')).expo;
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+  const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+  for (const version of [app.version, pkg.version, lock.version, lock.packages[''].version]) {
+    assert.equal(version, '2.1.0');
+  }
+  assert.equal(app.android.versionCode, 15);
+  const gradle = readFileSync('android/app/build.gradle', 'utf8');
+  assert.match(gradle, /versionName "2\.1\.0"/);
+  assert.match(gradle, /versionCode 15\b/);
+});
+
 test('CI signs release builds with secrets without changing debug signing', () => {
   const source = `android {
     buildTypes {

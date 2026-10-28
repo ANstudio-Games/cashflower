@@ -92,9 +92,11 @@ export default function AddPlanModal() {
           completed_at: existingPlan.completed_at ?? null,
           notes: notes.trim() || null,
         });
-        Alert.alert(t('common_success'), t('plan_modal_success_edit'), [
-          { text: t('common_ok'), onPress: () => router.back() },
-        ]);
+        await handleSavedWithAd(db, 'plan', () => {
+          Alert.alert(t('common_success'), t('plan_modal_success_edit'), [
+            { text: t('common_ok'), onPress: () => router.back() },
+          ]);
+        });
       } else {
         await createPlan({
           title: title.trim(),
