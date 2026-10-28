@@ -99,7 +99,7 @@ interface FinanceContextType {
   }) => Promise<void>;
   deleteDebtPaymentById: (paymentId: string) => Promise<void>;
   createInvestment: (item: Omit<Investment, 'id' | 'created_at' | 'pnl' | 'pnl_percentage'>) => Promise<void>;
-  editInvestment: (item: Investment) => Promise<void>;
+  editInvestment: (item: Omit<Investment, 'created_at' | 'pnl' | 'pnl_percentage'>) => Promise<void>;
   deleteInvestmentById: (id: string) => Promise<void>;
   saveNewBudget: (budget: { id: string; category_id: string | null; monthly_limit: number }) => Promise<void>;
   removeBudget: (id: string) => Promise<void>;
@@ -402,9 +402,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await refreshAll();
   };
 
-  const editInvestment = async (item: Investment) => {
-    const { pnl, pnlPercentage: pnl_percentage } = calculateInvestmentReturn(item.capital ?? item.buy_price, item.buy_price, item.sell_price);
-    await updateInvestment(db, { ...item, pnl, pnl_percentage });
+  const editInvestment = async (item: Omit<Investment, 'created_at' | 'pnl' | 'pnl_percentage'>) => {
+    const existing = investments.find(investment => investment.id === item.id);
+    if (!existing) throw new Error('Investment not found');
+    // Legacy records store total cost/proceeds, so preserve their accounting model.
+    const capital = existing.capital == null ? null : item.capital;
+    if (existing.capital != null && capital == null) throw new RangeError('Investment capital is required');
+    const { pnl, pnlPercentage: pnl_percentage } = calculateInvestmentReturn(
+      capital ?? item.buy_price, item.buy_price, item.sell_price
+    );
+    await updateInvestment(db, { ...item, capital, pnl, pnl_percentage, created_at: existing.created_at });
     triggerHaptic();
     await refreshAll();
   };

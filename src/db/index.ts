@@ -871,10 +871,13 @@ export async function addInvestment(db: SQLite.SQLiteDatabase, item: Investment)
 }
 
 export async function updateInvestment(db: SQLite.SQLiteDatabase, item: Investment): Promise<void> {
-  await db.runAsync(
-    `UPDATE investments SET instrument_type = ?, asset_name = ?, capital = ?, buy_price = ?, sell_price = ?, pnl = ?, pnl_percentage = ?, trade_date = ?, notes = ? WHERE id = ?`,
-    [item.instrument_type, item.asset_name, item.capital ?? null, item.buy_price, item.sell_price, item.pnl, item.pnl_percentage, item.trade_date, item.notes ?? null, item.id]
+  const result = await db.runAsync(
+    `UPDATE investments SET instrument_type = ?, asset_name = ?, capital = ?, buy_price = ?,
+     sell_price = ?, pnl = ?, pnl_percentage = ?, trade_date = ?, notes = ? WHERE id = ?`,
+    [item.instrument_type, item.asset_name, item.capital ?? null, item.buy_price,
+      item.sell_price, item.pnl, item.pnl_percentage, item.trade_date, item.notes ?? null, item.id]
   );
+  if (result.changes === 0) throw new Error('Investment not found');
 }
 
 export async function deleteInvestment(db: SQLite.SQLiteDatabase, id: string): Promise<void> {

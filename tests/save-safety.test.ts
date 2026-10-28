@@ -17,7 +17,7 @@ it('protects transfer rows and wires guarded saves in all eight forms', () => {
   assert.match(read('src/context/finance-context.tsx'), /Transfers require a dedicated editor/);
   for (const name of ['add-transaction', 'add-debt', 'add-investment', 'add-category', 'add-plan', 'add-wallet', 'transfer-funds', 'budget']) {
     const source = read(`src/app/modal/${name}.tsx`);
-    assert.match(source, /disabled=\{isSaving\}/, name);
+    assert.match(source, /disabled=\{isSaving(?:\}| \|\|)/, name);
     assert.match(source, /void runSave\(handle(?:Submit|Save)\)/, name);
   }
 });

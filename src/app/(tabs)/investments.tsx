@@ -145,7 +145,10 @@ export default function InvestmentsScreen() {
         renderItem={({ item }) => (
           <InvestmentItem
             item={item}
-            onEdit={(investment) => router.push({ pathname: '/modal/add-investment', params: { id: investment.id } })}
+            onEdit={(investment) => router.push({
+              pathname: '/modal/add-investment',
+              params: { id: investment.id },
+            })}
             onDelete={(id) => deleteInvestmentById(id)}
           />
         )}

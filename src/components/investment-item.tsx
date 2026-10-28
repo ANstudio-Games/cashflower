@@ -8,11 +8,11 @@ import { useI18n } from '@/i18n';
 
 interface InvestmentItemProps {
   item: Investment;
-  onDelete: (id: string) => void;
   onEdit: (item: Investment) => void;
+  onDelete: (id: string) => void;
 }
 
-export function InvestmentItem({ item, onDelete, onEdit }: InvestmentItemProps) {
+export function InvestmentItem({ item, onEdit, onDelete }: InvestmentItemProps) {
   const isProfit = item.pnl >= 0;
   const { t, language, formatDateShort } = useI18n();
 
